@@ -9,20 +9,15 @@ import SwiftUI
 
 struct ChangesView: View {
 
-    let repo: Repo?
+    let repo: Repo
+    let viewModel: ViewModel
 
-    let changedFiles : [String] = [
-        "ContentView.swift",
-        "TopBar.swift",
-        "ChangesView.swift",
-        "README.md"
-    ]
     @State private var commitMessage: String = ""
     @State private var selectedFiles = Set<String>()
 
     var body: some View {
         
-        if changedFiles.count == 0 {
+        if viewModel.changedFiles.isEmpty {
             NoChangesView()
         } else {
             VStack {
@@ -34,14 +29,19 @@ struct ChangesView: View {
     
     var commitSection: some View {
         HStack {
-            TitleView(title: "Uncommitted Changes", desc: "You have \(changedFiles.count) modified files in your working directory.")
+            TitleView(title: "Uncommitted Changes", desc: "You have \(viewModel.changedFiles.count) modified files in your working directory.")
             HStack {
                 TextField("Enter commit message", text: $commitMessage)
                     .textFieldStyle(.plain)
                     .font(Font.system(size: 14, weight: .regular))
                     .padding(.leading)
                 SmallProminentButton(title: "Commit") {
-                    
+                    guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    Task {
+                        try? await viewModel.commitChanges(message: commitMessage, at: repo)
+                        commitMessage = ""
+                        selectedFiles.removeAll()
+                    }
                 }
             }
             .frame(maxWidth: 500)
@@ -63,13 +63,21 @@ struct ChangesView: View {
                         .font(.headline)
                     Spacer()
                     SmallButton(title: "Stage All") {
-                        
+                        Task {
+                            try? await viewModel.stageAll(at: repo)
+                        }
                     }
                     SmallButton(title: "Stage Selected ") {
-                        
+                        Task {
+                            try? await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
+                            selectedFiles.removeAll()
+                        }
                     }
                     SmallButton(title: "Discard All", tint: .red) {
-                        
+                        Task {
+                            try? await viewModel.discardAllChanges(at: repo)
+                            selectedFiles.removeAll()
+                        }
                     }
                 }
                 .padding()
@@ -77,40 +85,70 @@ struct ChangesView: View {
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(changedFiles, id: \.self) { file in
+                        ForEach(viewModel.changedFiles) { file in
+                            let isSelected = selectedFiles.contains(file.path)
+                            
                             HStack(spacing: 12) {
                                 
                                 Image(systemName: "doc.text")
+                                    .foregroundStyle(statusColor(for: file.status))
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(file)
+                                    Text(file.path)
                                         .font(.system(size: 13, weight: .medium))
-                                    Text("Modified")
+                                    Text(file.status + (file.isStaged ? " (Staged)" : " (Unstaged)"))
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(statusColor(for: file.status).opacity(0.8))
                                 }
                                 Spacer()
-                                Image(systemName: selectedFiles.contains(file) ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(selectedFiles.contains(file) ? .blue : .secondary)
+                                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(isSelected ? .blue : .secondary)
                                     .font(Font.system(size: 16))
                             }
                             .padding()
                             .contentShape(RoundedRectangle(cornerRadius: 10))
                             .onTapGesture {
-                                if selectedFiles.contains(file) {
-                                    selectedFiles.remove(file)
+                                if isSelected {
+                                    selectedFiles.remove(file.path)
                                 } else {
-                                    selectedFiles.insert(file)
+                                    selectedFiles.insert(file.path)
                                 }
                             }
                             .overlay {
-                                if selectedFiles.contains(file) {
+                                if isSelected {
                                     RoundedRectangle(cornerRadius: 10)
                                         .opacity(0.1)
                                 }
                             }
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    Task {
+                                        try? await viewModel.discardChange(for: file, at: repo)
+                                    }
+                                } label: {
+                                    Label("Discard Changes", systemImage: "trash")
+                                }
+                                
+                                if file.isStaged {
+                                    Button {
+                                        Task {
+                                            try? await viewModel.unstage(file: file.path, at: repo)
+                                        }
+                                    } label: {
+                                        Label("Unstage File", systemImage: "minus.square")
+                                    }
+                                } else {
+                                    Button {
+                                        Task {
+                                            try? await viewModel.stage(file: file.path, at: repo)
+                                        }
+                                    } label: {
+                                        Label("Stage File", systemImage: "plus.square")
+                                    }
+                                }
+                            }
                             
-                            if file != changedFiles.last {
+                            if file.path != viewModel.changedFiles.last?.path {
                                 Divider()
                             }
                         }
@@ -125,6 +163,19 @@ struct ChangesView: View {
         }
         .padding(.horizontal)
         .padding(.bottom)
+    }
+    
+    private func statusColor(for status: String) -> Color {
+        switch status {
+        case "Untracked", "Added":
+            return .green
+        case "Deleted":
+            return .red
+        case "Renamed":
+            return .purple
+        default: // "Modified"
+            return .orange
+        }
     }
 }
 
@@ -210,12 +261,12 @@ struct TitleView: View {
     }
 }
 #Preview {
-    let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
-    ChangesView(repo: repo)
-        .frame(width: 1000)
-        .overlay {
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-        }
-        .padding()
+//    let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
+//    ChangesView(repo: repo)
+//        .frame(width: 1000)
+//        .overlay {
+//            RoundedRectangle(cornerRadius: 20)
+//                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+//        }
+//        .padding()
 }

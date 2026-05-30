@@ -10,6 +10,7 @@ import SwiftUI
 struct TopBar: View {
 
     let repo: Repo?
+    let viewModel: ViewModel
 
     var body: some View {
         if let repo = repo {
@@ -21,7 +22,7 @@ struct TopBar: View {
                     .opacity(0.5)
                 HStack {
                     Image(systemName: "arrow.trianglehead.branch")
-                    Text(repo.currentBranch)
+                    Text(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
                 }
                 .background {
                     RoundedRectangle(cornerRadius: 10)
@@ -32,14 +33,27 @@ struct TopBar: View {
                 }
                 .padding(8)
                 Spacer()
+                
+                if viewModel.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .padding(.trailing, 10)
+                }
+                
                 BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")) {
-                    
+                    Task {
+                        try? await viewModel.fetch(at: repo)
+                    }
                 }
                 BaseButton(title: "Pull", image: Image(.pull)) {
-                    
+                    Task {
+                        try? await viewModel.pull(at: repo)
+                    }
                 }
                 ProminentBaseButton(title: "Push", image: Image(.push)) {
-                    
+                    Task {
+                        try? await viewModel.push(at: repo)
+                    }
                 }
             }
         } else {
@@ -48,19 +62,12 @@ struct TopBar: View {
                     .font(Font.system(size: 18, weight: .semibold))
                 Spacer()
                 BaseButton(title: "Clone a Repo") {
-                    
+                    viewModel.showCloneModal = true
                 }
                 BaseButton(title: "Add Local Repo") {
-                    
+                    viewModel.showAddRepoModal = true
                 }
             }
         }
     }
-}
-
-#Preview {
-    let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
-    TopBar(repo: repo)
-        .frame(height: 30)
-        .padding()
 }

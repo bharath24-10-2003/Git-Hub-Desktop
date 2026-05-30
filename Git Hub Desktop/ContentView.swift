@@ -10,16 +10,15 @@ import SwiftUI
 struct ContentView: View {
 
     @State private var viewModel = ViewModel()
-
-    @State private var selectedRepo: Repo?
     @State private var selectedSection: RepoSection = .changes
 
     var body: some View {
+        @Bindable var viewModel = viewModel
 
         NavigationSplitView {
 
             Sidebar(
-                selectedRepo: $selectedRepo,
+                selectedRepo: $viewModel.selectedRepo,
                 selectedSection: $selectedSection,
                 repos: viewModel.store.sortedRepos
             )
@@ -28,30 +27,36 @@ struct ContentView: View {
 
             VStack(spacing: 0) {
 
-//                TopBar(
-//                    repo: selectedRepo,
-//                    selectedSection: selectedSection
-//                )
+                TopBar(
+                    repo: viewModel.selectedRepo,
+                    viewModel: viewModel
+                )
 
                 Divider()
 
-//                BodyView(
-//                    repo: selectedRepo,
-//                    selectedSection: selectedSection
-//                )
+                BodyView(
+                    repo: viewModel.selectedRepo,
+                    section: selectedSection,
+                    viewModel: viewModel
+                )
             }
             .padding()
         }
-        .onAppear {
-
-            if selectedRepo == nil {
-                selectedRepo = viewModel.store.sortedRepos.first
+        .sheet(isPresented: $viewModel.showCloneModal) {
+            CloneModal(viewModel: viewModel)
+        }
+        .sheet(isPresented: $viewModel.showAddRepoModal) {
+            AddRepoModal(viewModel: viewModel)
+        }
+        .sheet(isPresented: $viewModel.showNewBranchModal) {
+            if let repo = viewModel.selectedRepo {
+                NewBranchModal(repo: repo, viewModel: viewModel)
             }
         }
-        .onChange(of: selectedRepo) {
-
+        .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes
         }
+        .colorScheme(.light)
     }
 }
 

@@ -9,25 +9,46 @@ import SwiftUI
 
 struct BranchesView: View {
     
-    let localBranches: [String] = ["main", "dev", "feature/login", "feature/signup"]
-    let remoteBranches: [String] = ["origin/main", "origin/dev", "origin/feature/login", "origin/feature/signup"]
+    let repo: Repo
+    let viewModel: ViewModel
     
     @State var searchLocalBranch: String = ""
     @State var searchRemoteBranch: String = ""
+    @State var selectedBranch: String? = nil
     
-    @State var selectedBranch: String? = "main"
-    @State var currentBranch: String?
+    var filteredLocalBranches: [String] {
+        if searchLocalBranch.isEmpty {
+            return viewModel.localBranches
+        } else {
+            return viewModel.localBranches.filter { $0.localizedCaseInsensitiveContains(searchLocalBranch) }
+        }
+    }
+    
+    var filteredRemoteBranches: [String] {
+        if searchRemoteBranch.isEmpty {
+            return viewModel.remoteBranches
+        } else {
+            return viewModel.remoteBranches.filter { $0.localizedCaseInsensitiveContains(searchRemoteBranch) }
+        }
+    }
     
     var body: some View {
         VStack {
             HStack {
                 TitleView(title: "Branches", desc: "Manage your Local and Remote branches here.")
                 Spacer()
-                BaseButton(title: "Switch Branch") {
-                    
+                
+                if let selected = selectedBranch {
+                    BaseButton(title: "Switch to '\(selected)'") {
+                        Task {
+                            try? await viewModel.checkout(branch: selected, at: repo)
+                            selectedBranch = nil
+                        }
+                    }
                 }
-                ProminentBaseButton(title: "New Branch", image: Image(.plus)) {
-                    
+                
+                ProminentBaseButton(title: "New Branch", image: Image(systemName: "plus")) {
+                    viewModel.showNewBranchModal = true
                 }
                 .padding()
             }
@@ -37,7 +58,7 @@ struct BranchesView: View {
                         Image(systemName: "pc")
                         Text("Local Branch")
                             .font(Font.system(size: 14, weight: .semibold))
-                        Text("2")
+                        Text("\(viewModel.localBranches.count)")
                             .padding(.vertical, 2)
                             .padding(.horizontal, 10)
                             .overlay {
@@ -51,8 +72,8 @@ struct BranchesView: View {
                     Divider()
                     
                     ScrollView {
-                        ForEach (localBranches, id: \.self) { branch in
-                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == currentBranch)
+                        ForEach (filteredLocalBranches, id: \.self) { branch in
+                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
                                 .onTapGesture {
                                     selectedBranch = branch
                                 }
@@ -71,7 +92,7 @@ struct BranchesView: View {
                         Image(systemName: "cloud.fill")
                         Text("Remote Branch")
                             .font(Font.system(size: 14, weight: .semibold))
-                        Text("2")
+                        Text("\(viewModel.remoteBranches.count)")
                             .padding(.vertical, 2)
                             .padding(.horizontal, 10)
                             .overlay {
@@ -85,8 +106,9 @@ struct BranchesView: View {
                     Divider()
                     
                     ScrollView {
-                        ForEach (remoteBranches, id: \.self) { branch in
-                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == currentBranch)
+                        ForEach (filteredRemoteBranches, id: \.self) { branch in
+                            // Remote branch is read-only, checkout creates local tracking branch
+                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
                                 .onTapGesture {
                                     selectedBranch = branch
                                 }
@@ -108,24 +130,32 @@ struct BranchesView: View {
 struct BranchText: View {
     
     let branchName: String
-    @State var isSelected: Bool
-    @State var isCurrent: Bool
+    let isSelected: Bool
+    let isCurrent: Bool
     
     var body: some View {
         HStack {
-            Image(.branch)
+            Image(systemName: "arrow.trianglehead.branch")
                 .font(Font.system(size: 14, weight: .semibold))
             Text(branchName)
                 .font(Font.system(size: 14, weight: .semibold,design: .rounded))
                 .underline(color: isCurrent ? .blue : .clear)
             Spacer()
+            if isCurrent {
+                Text("current")
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 10).opacity(0.1))
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
         .overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(lineWidth: 1)
+                    .stroke(Color.blue, lineWidth: 1.5)
                     .padding(1)
             } else {
                 RoundedRectangle(cornerRadius: 10)
@@ -135,5 +165,5 @@ struct BranchText: View {
     }
 }
 #Preview {
-    BranchesView()
+//    BranchesView()
 }

@@ -9,8 +9,10 @@ import SwiftUI
 
 struct CloneModal: View {
     
+    let viewModel: ViewModel
+    
     @State private var url: String = ""
-    @State private var path: String = "Documents/GitHub/"
+    @State private var path: String = ""
     
     var body: some View {
         VStack (alignment:.leading) {
@@ -23,34 +25,51 @@ struct CloneModal: View {
             Text("Git Repository URL")
                 .font(Font.system(size: 14,weight: .semibold,design: .default))
             
-            CustomTextField(url: $url, imageName: "link", placeholder: "git@github.com:user/repo.git")
+            CustomTextField(url: $url, imageName: "link", placeholder: "https://github.com/user/repo.git")
                 .padding(.bottom, 20)
 
-            Text("Choose a path")
+            Text("Choose local destination path")
                 .font(Font.system(size: 14,weight: .semibold,design: .default))
             HStack (alignment:.center) {
                 
-                CustomTextField(url: $path, imageName: "folder")
+                CustomTextField(url: $path, imageName: "folder", placeholder: "/path/to/folder")
                 BaseButton(title: "Browse") {
-                    
+                    if let folder = viewModel.selectFolder() {
+                        path = folder
+                    }
                 }
-                
             }
             
             Divider()
                 .padding(.horizontal, -16)
                 .padding(.top)
             
-            HStack (alignment:.center) {
-                Spacer()
-                BaseButton(title: "Close") {
-                    
+            if viewModel.isCloning {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Cloning repository...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
-                ProminentBaseButton(title: "Clone Repository") {
-                    
+                .padding(.top, 10)
+            } else {
+                HStack (alignment:.center) {
+                    Spacer()
+                    BaseButton(title: "Close") {
+                        viewModel.showCloneModal = false
+                    }
+                    ProminentBaseButton(title: "Clone Repository") {
+                        guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                        Task {
+                            try? await viewModel.cloneRepo(url: url, destinationPath: path)
+                            viewModel.showCloneModal = false
+                        }
+                    }
                 }
+                .padding(.top, 10)
             }
-            .padding(.top, 10)
         }
         .frame(width: 500)
         .padding()
@@ -59,7 +78,9 @@ struct CloneModal: View {
 
 struct AddRepoModal: View {
     
-    @State private var path: String = "Documents/GitHub/"
+    let viewModel: ViewModel
+    
+    @State private var path: String = ""
     
     var body: some View {
         VStack (alignment:.leading) {
@@ -73,11 +94,12 @@ struct AddRepoModal: View {
                 .font(Font.system(size: 14,weight: .semibold,design: .default))
             HStack (alignment:.center) {
                 
-                CustomTextField(url: $path, imageName: "folder")
+                CustomTextField(url: $path, imageName: "folder", placeholder: "/path/to/repo")
                 BaseButton(title: "Browse") {
-                    
+                    if let folder = viewModel.selectFolder() {
+                        path = folder
+                    }
                 }
-                
             }
             
             Divider()
@@ -87,10 +109,12 @@ struct AddRepoModal: View {
             HStack (alignment:.center) {
                 Spacer()
                 BaseButton(title: "Close") {
-                    
+                    viewModel.showAddRepoModal = false
                 }
                 ProminentBaseButton(title: "Add Repository") {
-                    
+                    guard !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    viewModel.addExistingRepo(name: "", path: path)
+                    viewModel.showAddRepoModal = false
                 }
             }
             .padding(.top, 10)
@@ -222,32 +246,50 @@ struct ModalDescription: View {
     }
 }
 
-#Preview {
+struct NewBranchModal: View {
     
-//    CloneModal()
-//        .overlay {
-//            RoundedRectangle(cornerRadius: 30)
-//                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-//        }
-//        .padding()
+    let repo: Repo
+    let viewModel: ViewModel
     
-    AddRepoModal()
-        .overlay {
-            RoundedRectangle(cornerRadius: 30)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+    @State private var branchName: String = ""
+    
+    var body: some View {
+        VStack (alignment:.leading) {
+            ModalDescription(
+                title: "Create New Branch",
+                description: "Enter a name for your new branch. This will branch off from the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'."
+            )
+            
+            Divider()
+                .padding(.horizontal, -16)
+                .padding(.vertical)
+            
+            Text("Branch Name")
+                .font(Font.system(size: 14, weight: .semibold))
+            
+            CustomTextField(url: $branchName, imageName: "arrow.trianglehead.branch", placeholder: "feature/new-design")
+                .padding(.bottom, 20)
+            
+            Divider()
+                .padding(.horizontal, -16)
+                .padding(.top)
+            
+            HStack {
+                Spacer()
+                BaseButton(title: "Cancel") {
+                    viewModel.showNewBranchModal = false
+                }
+                ProminentBaseButton(title: "Create Branch") {
+                    guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    Task {
+                        try? await viewModel.createBranch(name: branchName, at: repo)
+                        viewModel.showNewBranchModal = false
+                    }
+                }
+            }
+            .padding(.top, 10)
         }
+        .frame(width: 500)
         .padding()
-    
-//    ModalDescription(title: "Clone Repository", description: "Enter the URL of the repository and the path where you want to clone")
-    
-//    CloneModal()
-//    
-    HStack {
-        BaseButton(title: "Push", image: Image(systemName: "arrowshape.up")) {
-            
-        }
-        ProminentBaseButton(title: "Pull", image: Image(systemName: "arrowshape.down")) {
-            
-        }
     }
 }

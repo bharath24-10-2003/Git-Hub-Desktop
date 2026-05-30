@@ -9,21 +9,24 @@ import SwiftUI
 
 struct HistoryView: View {
     
-    @State var currentBranch: String = ""
-    @State var commits: [Commit] = []
+    let repo: Repo
+    let viewModel: ViewModel
+    
     var body: some View {
         VStack {
             HStack {
-                TitleView(title: "History", desc: "All commits in \(currentBranch) branch")
+                TitleView(title: "History", desc: "All commits in \(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch) branch")
                 BaseButton(title: "Refresh") {
-                    
+                    Task {
+                        await viewModel.loadRepositoryData(for: repo)
+                    }
                 }
                 .padding(.trailing, 24)
             }
             
             ScrollView(.vertical, showsIndicators: false) {
-                ForEach(commits, id: \.self) { commit in
-                    HistoryCommitView(commit: commit)
+                ForEach(viewModel.commits) { commit in
+                    HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
                 }
                 .padding()
             }
@@ -34,49 +37,53 @@ struct HistoryView: View {
 
 struct HistoryCommitView: View {
     
-    @State var commit: Commit
+    let commit: Commit
+    let repo: Repo
+    let viewModel: ViewModel
     
     var body: some View {
         HStack {
-            Text((commit.author.split(separator: "<")[1].split(separator: "").first?.uppercased() ?? " "))
-                .padding()
-                .font(Font.system(size: 24, weight: .bold, design: .rounded))
-                .overlay {
-                    Circle()
-                        .opacity(0.2)
-                }
+            Text(authorInitial)
+                .frame(width: 44, height: 44)
+                .font(Font.system(size: 18, weight: .bold, design: .rounded))
+                .background(Circle().opacity(0.15))
             VStack(alignment: .leading) {
                 Text(commit.message)
                     .font(Font.system(size: 14,weight: .semibold))
                 HStack {
                     VStack(alignment: .leading) {
                         Text (commit.displayDate)
-                            .font(Font.system(size: 12,weight: .regular))
+                            .font(Font.system(size: 11,weight: .regular))
                         Text(commit.displayTime)
-                            .font(Font.system(size: 12,weight: .regular))
+                            .font(Font.system(size: 11,weight: .regular))
                     }
                     .padding(.trailing, 24)
                     Button {
                         NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(commit.shortHash, forType: .string)
+                        NSPasteboard.general.setString(commit.id, forType: .string)
                     } label: {
                         Text (commit.shortHash)
                             .font(.caption)
-                            .frame(width: 50)
+                            .frame(width: 60)
                     }
                 }
             }
             Spacer()
             Button {
-                
+                Task {
+                    try? await viewModel.revertCommit(commit.id, at: repo)
+                }
             } label: {
                 Text("Revert")
                     .padding(3)
             }
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .buttonStyle(.glass)
+            
             Button {
-                
+                Task {
+                    try? await viewModel.cherryPickCommit(commit.id, at: repo)
+                }
             } label: {
                 Text("Cherry pick")
                     .padding(3)
@@ -92,10 +99,15 @@ struct HistoryCommitView: View {
                 .opacity(0.2)
         }
     }
+    
+    private var authorInitial: String {
+        let name = commit.author.split(separator: "<").first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return String(name.prefix(1)).uppercased()
+    }
 }
 
 #Preview {
-        HistoryView(commits: Commit.previewData)
+//        HistoryView(commits: Commit.previewData)
 //    let commit = Commit(id: "123", shortHash: "a56afc69fd5b4a6d3da12d72fa784efd320b7109", author: "Bharath <bharath.a@tringapps.com>", date: "Thu Nov 13 14:15:59 2025 +0530", message: "Initial commit")
 //    HistoryCommitView(commit: commit)
 //        .padding()
