@@ -156,10 +156,10 @@ struct CustomTextField: View {
 
 struct BaseButton: View {
     
-    @State var title: String
-    @State var image: Image?
-    @State var textTint: Color = .white
-    @State var action: (() -> Void)
+    var title: String
+    var image: Image? = nil
+    var textTint: Color = .white
+    var action: (() -> Void)
     
     var body: some View {
         Button {
@@ -193,10 +193,10 @@ struct BaseButton: View {
 }
 struct ProminentBaseButton: View{
     
-    @State var title: String
-    @State var image: Image?
-    @State var textTint: Color = .black
-    @State var action: (() -> Void)
+    var title: String
+    var image: Image? = nil
+    var textTint: Color = .black
+    var action: (() -> Void)
     
     var body: some View {
         Button {
