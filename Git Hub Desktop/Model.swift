@@ -160,3 +160,10 @@ extension Commit {
         )
     ]
 }
+
+struct ChangedFile: Identifiable, Hashable {
+    var id: String { path }
+    let path: String
+    let status: String // e.g., "Modified", "Added", "Deleted", "Untracked"
+    let isStaged: Bool
+}

@@ -52,9 +52,9 @@ struct BranchesView: View {
                     
                     ScrollView {
                         ForEach (localBranches, id: \.self) { branch in
-                            BranchText(branchName: branch, isSelected: selectedBranch == "", isCurrent: branch == currentBranch)
+                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == currentBranch)
                                 .onTapGesture {
-                                    selectedBranch = ""
+                                    selectedBranch = branch
                                 }
                         }
                         .padding(.horizontal)

@@ -40,6 +40,10 @@ final class GitService {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: gitPath)
         
+        var env = ProcessInfo.processInfo.environment
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        process.environment = env
+        
         if let repoPath = repoPath {
             process.currentDirectoryURL = URL(fileURLWithPath: repoPath)
         }
@@ -54,26 +58,32 @@ final class GitService {
         
         try process.run()
         
-        return try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { process in
-                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                
-                let output = String(data: outputData, encoding: .utf8) ?? ""
-                let error = String(data: errorData, encoding: .utf8) ?? ""
-                
-                let result = GitResult(
-                    output: output.trimmingCharacters(in: .whitespacesAndNewlines),
-                    error: error.trimmingCharacters(in: .whitespacesAndNewlines),
-                    exitCode: process.terminationStatus
-                )
-                
-                if result.isSuccess {
-                    continuation.resume(returning: result)
-                } else {
-                    continuation.resume(throwing: GitError.executionFailed(result.error.isEmpty ? result.output : result.error))
-                }
-            }
+        let outputTask = Task {
+            outputPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+        
+        let errorTask = Task {
+            errorPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+        
+        let outputData = await outputTask.value
+        let errorData = await errorTask.value
+        
+        process.waitUntilExit()
+        
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let error = String(data: errorData, encoding: .utf8) ?? ""
+        
+        let result = GitResult(
+            output: output.trimmingCharacters(in: .whitespacesAndNewlines),
+            error: error.trimmingCharacters(in: .whitespacesAndNewlines),
+            exitCode: process.terminationStatus
+        )
+        
+        if result.isSuccess {
+            return result
+        } else {
+            throw GitError.executionFailed(result.error.isEmpty ? result.output : result.error)
         }
     }
 }
@@ -88,9 +98,9 @@ extension GitService {
     }
     
     // Status
-    func status(at repo: String) async throws -> String {
+    func status(at repo: String) async throws -> [ChangedFile] {
         let result = try await run(["status", "--porcelain"], at: repo)
-        return result.output
+        return parseStatus(result.output)
     }
     
     // Add
@@ -121,12 +131,13 @@ extension GitService {
     }
     
     // Log
-    func log(at repo: String) async throws -> String {
-        let result = try await run(
-            ["log", "--oneline", "--graph", "--decorate"],
-            at: repo
-        )
-        return result.output
+    func log(at repo: String) async throws -> [Commit] {
+        let result = try await run([
+            "log",
+            "--pretty=format:%H|%h|%an <%ae>|%ad|%s",
+            "--date=format:%a %b %d %H:%M:%S %Y %z"
+        ], at: repo)
+        return parseLog(result.output)
     }
     
     func fetch(at repo:String) async throws {
@@ -198,5 +209,75 @@ extension GitService {
     func listTags(at repo: String) async throws -> [String] {
         let result = try await run(["tag"], at: repo)
         return result.output.components(separatedBy: "\n")
+    }
+    
+    // MARK: - Parsers
+    
+    private func parseStatus(_ output: String) -> [ChangedFile] {
+        var files: [ChangedFile] = []
+        let lines = output.components(separatedBy: "\n")
+        for line in lines {
+            guard line.count >= 4 else { continue }
+            
+            let indexStatus = line[line.startIndex]
+            let worktreeStatus = line[line.index(line.startIndex, offsetBy: 1)]
+            let filePath = String(line.suffix(from: line.index(line.startIndex, offsetBy: 3))).trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            var cleanPath = filePath
+            if cleanPath.hasPrefix("\"") && cleanPath.hasSuffix("\"") {
+                cleanPath = String(cleanPath.dropFirst().dropLast())
+            }
+            
+            var status = "Modified"
+            var isStaged = false
+            
+            if indexStatus != " " && indexStatus != "?" {
+                isStaged = true
+            }
+            
+            switch (indexStatus, worktreeStatus) {
+            case ("?", "?"):
+                status = "Untracked"
+            case ("A", _):
+                status = "Added"
+            case ("D", _), (_, "D"):
+                status = "Deleted"
+            case ("M", _), (_, "M"):
+                status = "Modified"
+            case ("R", _):
+                status = "Renamed"
+            default:
+                status = "Modified"
+            }
+            
+            files.append(ChangedFile(path: cleanPath, status: status, isStaged: isStaged))
+        }
+        return files
+    }
+    
+    private func parseLog(_ output: String) -> [Commit] {
+        var commits: [Commit] = []
+        let lines = output.components(separatedBy: "\n")
+        for line in lines {
+            let fields = line.components(separatedBy: "|")
+            guard fields.count >= 5 else { continue }
+            
+            let id = fields[0]
+            let shortHash = fields[1]
+            let author = fields[2]
+            let date = fields[3]
+            
+            // Reconstruct the message in case it contains '|' characters
+            let message = fields[4...].joined(separator: "|")
+            
+            commits.append(Commit(
+                id: id,
+                shortHash: shortHash,
+                author: author,
+                date: date,
+                message: message
+            ))
+        }
+        return commits
     }
 }
