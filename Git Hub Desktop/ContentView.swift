@@ -8,14 +8,50 @@
 import SwiftUI
 
 struct ContentView: View {
+
+    @State private var viewModel = ViewModel()
+
+    @State private var selectedRepo: Repo?
+    @State private var selectedSection: RepoSection = .changes
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+
+        NavigationSplitView {
+
+            Sidebar(
+                selectedRepo: $selectedRepo,
+                selectedSection: $selectedSection,
+                repos: viewModel.store.sortedRepos
+            )
+
+        } detail: {
+
+            VStack(spacing: 0) {
+
+//                TopBar(
+//                    repo: selectedRepo,
+//                    selectedSection: selectedSection
+//                )
+
+                Divider()
+
+//                BodyView(
+//                    repo: selectedRepo,
+//                    selectedSection: selectedSection
+//                )
+            }
+            .padding()
         }
-        .padding()
+        .onAppear {
+
+            if selectedRepo == nil {
+                selectedRepo = viewModel.store.sortedRepos.first
+            }
+        }
+        .onChange(of: selectedRepo) {
+
+            selectedSection = .changes
+        }
     }
 }
 
