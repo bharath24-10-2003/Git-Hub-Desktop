@@ -36,7 +36,6 @@ final class GitService {
     // Core runner
     @discardableResult
     func run(_ args: [String], at repoPath: String? = nil) async throws -> GitResult {
-        print("GitService: Running '/usr/bin/git \(args.joined(separator: " "))' at path: '\(repoPath ?? "default")'")
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: gitPath)
@@ -57,12 +56,7 @@ final class GitService {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
-        do {
-            try process.run()
-        } catch {
-            print("GitService: Failed to start process: \(error.localizedDescription)")
-            throw error
-        }
+        try process.run()
         
         let outputTask = Task {
             outputPipe.fileHandleForReading.readDataToEndOfFile()
@@ -86,13 +80,11 @@ final class GitService {
             exitCode: process.terminationStatus
         )
         
-        print("GitService: Finished with exitCode: \(result.exitCode)")
-        if !result.isSuccess {
-            print("GitService: Error Output: '\(result.error)'")
-            throw GitError.executionFailed(result.error.isEmpty ? (result.output.isEmpty ? "Unknown Git error" : result.output) : result.error)
+        if result.isSuccess {
+            return result
+        } else {
+            throw GitError.executionFailed(result.error.isEmpty ? result.output : result.error)
         }
-        
-        return result
     }
 }
 
