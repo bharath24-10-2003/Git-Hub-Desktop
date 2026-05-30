@@ -3,7 +3,7 @@ import Foundation
 @Observable
 final class RepoStore {
     
-    private(set) var repos: [Repo] = []
+    var repos: [Repo] = []
     
     var sortedRepos: [Repo] {
         repos.sorted { $0.lastOpened > $1.lastOpened }
