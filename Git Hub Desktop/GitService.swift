@@ -280,4 +280,33 @@ extension GitService {
         }
         return commits
     }
+    
+    // MARK: - Revert
+    
+    func revert(commit: String, at repo: String) async throws {
+        try await run(["revert", "--no-edit", commit], at: repo)
+    }
+    
+    // MARK: - Discard and Unstage
+    
+    func restoreStaged(file: String, at repo: String) async throws {
+        try await run(["restore", "--staged", file], at: repo)
+    }
+    
+    func discardChanges(at repo: String) async throws {
+        try await run(["restore", "."], at: repo)
+        try await run(["clean", "-df"], at: repo)
+    }
+    
+    func discardChange(for file: ChangedFile, at repo: String) async throws {
+        if file.isStaged {
+            try await restoreStaged(file: file.path, at: repo)
+        }
+        if file.status == "Untracked" {
+            let fileURL = URL(fileURLWithPath: repo).appendingPathComponent(file.path)
+            try? FileManager.default.removeItem(at: fileURL)
+        } else {
+            try await run(["restore", file.path], at: repo)
+        }
+    }
 }

@@ -36,6 +36,11 @@ class ViewModel {
     var isLoading: Bool = false
     var errorMessage: String? = nil
     
+    // MARK: - Presentation Flags
+    var showCloneModal: Bool = false
+    var showAddRepoModal: Bool = false
+    var showNewBranchModal: Bool = false
+    
     init () {
         self.service = GitService()
         self.store = RepoStore()
@@ -157,6 +162,28 @@ class ViewModel {
         await loadRepositoryData(for: repo)
     }
     
+    func unstage(file: String, at repo: Repo) async throws {
+        try await service.restoreStaged(file: file, at: repo.path)
+        await loadRepositoryData(for: repo)
+    }
+    
+    func stageSelected(files: [String], at repo: Repo) async throws {
+        for file in files {
+            try await service.add(file: file, at: repo.path)
+        }
+        await loadRepositoryData(for: repo)
+    }
+    
+    func discardAllChanges(at repo: Repo) async throws {
+        try await service.discardChanges(at: repo.path)
+        await loadRepositoryData(for: repo)
+    }
+    
+    func discardChange(for file: ChangedFile, at repo: Repo) async throws {
+        try await service.discardChange(for: file, at: repo.path)
+        await loadRepositoryData(for: repo)
+    }
+    
     func commitChanges(message: String, at repo: Repo) async throws {
         try await service.commit(message: message, at: repo.path)
         await loadRepositoryData(for: repo)
@@ -184,6 +211,16 @@ class ViewModel {
     
     func createBranch(name: String, at repo: Repo) async throws {
         try await service.createBranch(branch: name, at: repo.path)
+        await loadRepositoryData(for: repo)
+    }
+    
+    func revertCommit(_ hash: String, at repo: Repo) async throws {
+        try await service.revert(commit: hash, at: repo.path)
+        await loadRepositoryData(for: repo)
+    }
+    
+    func cherryPickCommit(_ hash: String, at repo: Repo) async throws {
+        try await service.cherryPick(commit: hash, at: repo.path)
         await loadRepositoryData(for: repo)
     }
     
