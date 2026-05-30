@@ -71,6 +71,8 @@ struct BranchesView: View {
                     
                     Divider()
                     
+                    CustomSearchBar(text: $searchLocalBranch, placeholder: "Search local branches...")
+                    
                     ScrollView {
                         ForEach (filteredLocalBranches, id: \.self) { branch in
                             BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
@@ -80,7 +82,6 @@ struct BranchesView: View {
                         }
                         .padding(.horizontal)
                     }
-                    .searchable(text: $searchLocalBranch)
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 30)
@@ -105,6 +106,8 @@ struct BranchesView: View {
                     
                     Divider()
                     
+                    CustomSearchBar(text: $searchRemoteBranch, placeholder: "Search remote branches...")
+                    
                     ScrollView {
                         ForEach (filteredRemoteBranches, id: \.self) { branch in
                             // Remote branch is read-only, checkout creates local tracking branch
@@ -115,7 +118,6 @@ struct BranchesView: View {
                         }
                         .padding(.horizontal)
                     }
-                    .searchable(text: $searchRemoteBranch)
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 30)
@@ -124,6 +126,38 @@ struct BranchesView: View {
                 }
             }
         }
+    }
+}
+
+struct CustomSearchBar: View {
+    @Binding var text: String
+    let placeholder: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(8)
+        .padding(.vertical, 1)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(lineWidth: 1)
+                .opacity(0.2)
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 4)
     }
 }
 
@@ -165,5 +199,7 @@ struct BranchText: View {
     }
 }
 #Preview {
-//    BranchesView()
+    @Previewable @State var text: String = ""
+    CustomSearchBar(text: $text, placeholder: "Search Branch")
+        .padding()
 }
