@@ -47,7 +47,7 @@ struct BranchesView: View {
                     }
                 }
                 
-                ProminentBaseButton(title: "New Branch", image: Image(systemName: "plus")) {
+                ProminentBaseButton(title: "New Branch", image: Image(.plus)) {
                     viewModel.showNewBranchModal = true
                 }
                 .padding()

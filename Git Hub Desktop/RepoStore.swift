@@ -6,7 +6,7 @@ final class RepoStore {
     var repos: [Repo] = []
     
     var sortedRepos: [Repo] {
-        repos.sorted { $0.lastOpened > $1.lastOpened }
+        repos.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
     
     private let fileURL: URL

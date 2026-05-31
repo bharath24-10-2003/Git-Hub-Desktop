@@ -173,7 +173,7 @@ struct ChangesView: View {
             return .red
         case "Renamed":
             return .purple
-        default: // "Modified"
+        default:
             return .orange
         }
     }
@@ -204,7 +204,7 @@ struct NoChangesView : View {
 struct SmallProminentButton : View {
     
     let title: String
-    @State var action: () -> Void
+    let action: () -> Void
     
     var body: some View {
         Button {
@@ -223,8 +223,8 @@ struct SmallProminentButton : View {
 struct SmallButton : View {
     
     let title: String
-    @State var tint: Color = .black
-    @State var action: () -> Void
+    var tint: Color = .black
+    let action: () -> Void
 
     
     var body: some View {
