@@ -40,7 +40,7 @@ struct TopBar: View {
                         .padding(.trailing, 10)
                 }
                 
-                BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")) {
+                BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
                     Task {
                         try? await viewModel.fetch(at: repo)
                     }

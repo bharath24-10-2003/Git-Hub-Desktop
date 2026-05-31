@@ -159,6 +159,7 @@ struct BaseButton: View {
     var title: String
     var image: Image? = nil
     var textTint: Color = .white
+    var imageSize: CGSize = CGSize(width: 16, height: 16)
     var action: (() -> Void)
     
     var body: some View {
@@ -168,7 +169,7 @@ struct BaseButton: View {
             if let image = image {
                 image
                     .resizable()
-                    .frame(width: 16,height: 16)
+                    .frame(width: imageSize.width, height: imageSize.height)
                     .padding(.trailing, -8)
                     .padding(.leading, 16)
                     .tint(.white)
@@ -292,4 +293,79 @@ struct NewBranchModal: View {
         .frame(width: 500)
         .padding()
     }
+}
+
+struct PullBranchModal: View {
+    
+    let repo: Repo
+    let viewModel: ViewModel
+    
+    @State private var branchName: String = ""
+    @State private var error: String?
+    
+    var body: some View {
+        VStack (alignment:.leading) {
+            ModalDescription(
+                title: "Merge into current branch",
+                description: "Are you sure want to pull from \(branchName) into the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'?"
+            )
+            
+            if let error {
+                Text(error)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.red)
+                    .padding(10)
+                    .background {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.red.opacity(0.1))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(.red.opacity(0.3), lineWidth: 1)
+                    }
+            }
+            
+            Divider()
+                .padding(.horizontal, -16)
+                .padding(.vertical)
+
+            HStack {
+                Spacer()
+                BaseButton(title: "Cancel") {
+                    viewModel.showNewBranchModal = false
+                }
+                
+                BaseButton(title: "Rebase") {
+                    guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    Task {
+                        do {
+                            try await viewModel.pull(name: branchName, rebase: true, at: repo)
+                            viewModel.showMergeModal = false
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                }
+                
+                ProminentBaseButton(title: "Merge") {
+                    guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    Task {
+                        do {
+                            try await viewModel.pull(name: branchName, at: repo)
+                            viewModel.showMergeModal = false
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                }
+            }
+            .padding(.top, 10)
+        }
+        .frame(width: 500)
+        .padding()
+    }
+}
+
+#Preview {
+    PullBranchModal(repo: Repo(name: "Bharath", path: "usr/local", currentBranch: "main"), viewModel: ViewModel())
 }

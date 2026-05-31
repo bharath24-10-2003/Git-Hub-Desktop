@@ -138,6 +138,13 @@ extension GitService {
         try await run(["pull"], at: repo)
     }
     
+    func pull(branch: String, rebase: Bool = false, at repo: String) async throws {
+        if rebase {
+            try await run(["pull", "--rebase", "origin", branch], at: repo)
+        } else {
+            try await run(["pull", "origin", branch], at: repo)
+        }
+    }
     // Log
     func log(at repo: String) async throws -> [Commit] {
         let result = try await run([
@@ -170,10 +177,6 @@ extension GitService {
         return result.output.split(separator: "\n").map(String.init)
     }
     // MARK: - Rebase
-    
-    func startRebase(branch: String, at repo: String) async throws {
-        try await run(["rebase", branch], at: repo)
-    }
     
     func rebaseContinue(at repo: String) async throws {
         try await run(["rebase", "--continue"], at: repo)

@@ -47,6 +47,10 @@ struct BranchesView: View {
                     }
                 }
                 
+                BaseButton(title: "Pull Branch") {
+                    
+                }
+                
                 ProminentBaseButton(title: "New Branch", image: Image(.plus)) {
                     viewModel.showNewBranchModal = true
                 }

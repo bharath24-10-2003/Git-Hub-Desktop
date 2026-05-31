@@ -45,6 +45,8 @@ class ViewModel {
     var showCloneModal: Bool = false
     var showAddRepoModal: Bool = false
     var showNewBranchModal: Bool = false
+    var showMergeModal: Bool = false
+    var showRebaseModal: Bool = false
     
     init () {
         self.service = GitService()
@@ -202,6 +204,15 @@ class ViewModel {
     
     func pull(at repo: Repo) async throws {
         try await service.pull(at: repo.path)
+        await loadRepositoryData(for: repo)
+    }
+    
+    func pull(name: String,rebase: Bool = false, at repo: Repo) async throws {
+        if rebase {
+            try await service.pull(branch: name, rebase: true, at: repo.path)
+        } else {
+            try await service.pull(branch: name, at: repo.path)
+        }
         await loadRepositoryData(for: repo)
     }
     
