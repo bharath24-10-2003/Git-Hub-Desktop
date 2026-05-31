@@ -78,6 +78,11 @@ struct ContentView: View {
                 NewBranchModal(repo: repo, viewModel: viewModel)
             }
         }
+        .sheet(isPresented: $viewModel.showMergeModal) {
+            if let repo = viewModel.selectedRepo {
+                PullBranchModal(repo: repo, viewModel: viewModel)
+            }
+        }
         .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes
         }
