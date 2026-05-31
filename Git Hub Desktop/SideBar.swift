@@ -13,6 +13,7 @@ struct Sidebar: View {
     @Binding var selectedSection: RepoSection
     
     let repos: [Repo]
+    let viewModel: ViewModel
     
     var body: some View {
         
@@ -45,6 +46,42 @@ struct Sidebar: View {
                     }
                     .buttonStyle(.plain)
                 }
+                
+                Divider()
+                    .padding(.vertical, 4)
+                
+                Button {
+                    viewModel.showCloneModal = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.square.dashed")
+                        Text("Clone Repository")
+                        Spacer()
+                    }
+                    .padding(8)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.blue)
+                    .background(Color.blue.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+                
+                Button {
+                    viewModel.showAddRepoModal = true
+                } label: {
+                    HStack {
+                        Image(systemName: "folder.badge.plus")
+                        Text("Add Local Repository")
+                        Spacer()
+                    }
+                    .padding(8)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.blue)
+                    .background(Color.blue.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
             }
             
             Divider()
@@ -87,4 +124,10 @@ struct Sidebar: View {
 }
 
 #Preview {
+    Sidebar(
+        selectedRepo: .constant(nil),
+        selectedSection: .constant(.changes),
+        repos: [],
+        viewModel: ViewModel()
+    )
 }

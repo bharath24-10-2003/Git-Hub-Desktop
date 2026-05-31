@@ -153,11 +153,9 @@ class ViewModel {
     }
     
     func addExistingRepo(name: String, path: String) {
-        if let path = selectFolder() {
-            let name = URL(fileURLWithPath: path).lastPathComponent
-            store.addRepo(name: name, path: path)
-            self.selectedRepo = store.repos.first(where: { $0.path == path })
-        }
+        let name = URL(fileURLWithPath: path).lastPathComponent
+        store.addRepo(name: name, path: path)
+        self.selectedRepo = store.repos.first(where: { $0.path == path })
     }
     
     func stageAll(at repo: Repo) async throws {
