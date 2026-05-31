@@ -48,7 +48,7 @@ struct BranchesView: View {
                 }
                 
                 BaseButton(title: "Pull Branch") {
-                    
+                    viewModel.showMergeModal = true
                 }
                 
                 ProminentBaseButton(title: "New Branch", image: Image(.plus)) {

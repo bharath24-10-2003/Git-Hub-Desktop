@@ -332,7 +332,7 @@ struct PullBranchModal: View {
             HStack {
                 Spacer()
                 BaseButton(title: "Cancel") {
-                    viewModel.showNewBranchModal = false
+                    viewModel.showMergeModal = false
                 }
                 
                 BaseButton(title: "Rebase") {
