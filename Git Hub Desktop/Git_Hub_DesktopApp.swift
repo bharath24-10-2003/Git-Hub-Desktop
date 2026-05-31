@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct Git_Hub_DesktopApp: App {
+    @State private var viewModel = ViewModel()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: viewModel)
                 .preferredColorScheme(.light)
         }
     }

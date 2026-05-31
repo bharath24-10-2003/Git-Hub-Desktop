@@ -7,6 +7,10 @@ struct Repo: Codable, Identifiable, Equatable {
     var currentBranch: String
     var lastOpened: Date
     
+    static func == (lhs: Repo, rhs: Repo) -> Bool {
+        return lhs.id == rhs.id
+    }
+    
     init(name: String, path: String, currentBranch: String) {
         self.id = UUID()
         self.name = name

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
 
-    @State private var viewModel = ViewModel()
+    var viewModel: ViewModel
     @State private var selectedSection: RepoSection = .changes
 
     var body: some View {
@@ -80,9 +80,14 @@ struct ContentView: View {
         .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes
         }
+        .task {
+            if let repo = viewModel.selectedRepo {
+                await viewModel.loadRepositoryData(for: repo)
+            }
+        }
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(viewModel: ViewModel())
 }

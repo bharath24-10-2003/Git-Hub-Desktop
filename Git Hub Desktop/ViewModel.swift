@@ -15,12 +15,17 @@ class ViewModel {
     var store: RepoStore
     
     // MARK: - Reactive Repository States
+    private var lastLoadedRepoId: UUID? = nil
+    
     var selectedRepo: Repo? = nil {
         didSet {
             if let repo = selectedRepo {
-                store.markOpened(repo)
-                Task {
-                    await loadRepositoryData(for: repo)
+                if repo.id != lastLoadedRepoId {
+                    lastLoadedRepoId = repo.id
+                    store.markOpened(repo)
+                    Task {
+                        await loadRepositoryData(for: repo)
+                    }
                 }
             }
         }
@@ -44,7 +49,10 @@ class ViewModel {
     init () {
         self.service = GitService()
         self.store = RepoStore()
-        self.selectedRepo = store.sortedRepos.first
+        if let initialRepo = store.sortedRepos.first {
+            self.selectedRepo = initialRepo
+            self.lastLoadedRepoId = initialRepo.id
+        }
     }
     
     func getRepoCollection() -> [Repo] {
