@@ -101,7 +101,7 @@ struct HistoryCommitView: View {
     }
     
     private var authorInitial: String {
-        let name = commit.author.split(separator: "<").first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = commit.author.split(separator: "<")[1].split(separator: "").first ?? ""
         return String(name.prefix(1)).uppercased()
     }
 }
