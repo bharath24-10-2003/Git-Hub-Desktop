@@ -438,6 +438,7 @@ struct DeleteBranchModal: View {
     
     let repo: Repo
     let viewModel: ViewModel
+    @State private var isDeleting: Bool = false
     
     @State private var error: String?
     @State private var forceDelete: Bool = false
@@ -467,6 +468,9 @@ struct DeleteBranchModal: View {
 
             HStack {
                 Spacer()
+                if isDeleting {
+                    ProgressView()
+                }
                 BaseButton(title: "Cancel") {
                     viewModel.showDeleteBranchModal = false
                 }
@@ -474,7 +478,9 @@ struct DeleteBranchModal: View {
                 ProminentBaseButton(title: "Delete", textTint: .white) {
                     self.error = nil
                     Task {
+                        isDeleting = true
                         let result = await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, isRemote: viewModel.isRemoteBranchAction, at: repo)
+                        isDeleting = false
                         if result?.isSuccess == true {
                             viewModel.showDeleteBranchModal = false
                         } else {
@@ -482,6 +488,7 @@ struct DeleteBranchModal: View {
                         }
                     }
                 }
+                .disabled(isDeleting)
             }
             .padding(.top, 10)
         }
