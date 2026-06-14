@@ -5,10 +5,6 @@ final class RepoStore {
     
     var repos: [Repo] = []
     
-    var sortedRepos: [Repo] {
-        repos.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-    
     private let fileURL: URL
     
     init() {
@@ -42,6 +38,7 @@ final class RepoStore {
         do {
             let data = try Data(contentsOf: fileURL)
             repos = try JSONDecoder().decode([Repo].self, from: data)
+            repos.sort { $0.lastOpened > $1.lastOpened }
         } catch {
             print("Failed to load repos:", error)
             repos = []
@@ -67,7 +64,7 @@ final class RepoStore {
         }
         
         let repo = Repo(name: name, path: path, currentBranch: "main")
-        repos.append(repo)
+        repos.insert(repo, at: 0)
         persist()
     }
     

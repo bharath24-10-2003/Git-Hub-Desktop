@@ -20,7 +20,7 @@ struct ContentView: View {
             Sidebar(
                 selectedRepo: $viewModel.selectedRepo,
                 selectedSection: $selectedSection,
-                repos: viewModel.store.sortedRepos,
+                repos: viewModel.store.repos,
                 viewModel: viewModel
             )
 

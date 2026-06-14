@@ -52,7 +52,7 @@ class ViewModel {
     init () {
         self.service = GitService()
         self.store = RepoStore()
-        if let initialRepo = store.sortedRepos.first {
+        if let initialRepo = store.repos.first {
             self.selectedRepo = initialRepo
             self.lastLoadedRepoId = initialRepo.id
         }
