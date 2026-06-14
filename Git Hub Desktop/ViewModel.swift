@@ -174,184 +174,128 @@ class ViewModel {
     }
     
     @discardableResult
-    func stageAll(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.addAll(at: repo.path)
+    func stageAll(at repo: Repo) async throws -> GitResult {
+        let result = try await service.addAll(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func stage(file: String, at repo: Repo) async -> GitResult? {
-        do {
+    func stage(file: String, at repo: Repo) async throws -> GitResult {
+        let result = try await service.add(file: file, at: repo.path)
+            if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+            await loadRepositoryData(for: repo)
+            return result
+    }
+    
+    @discardableResult
+    func unstage(file: String, at repo: Repo) async throws -> GitResult {
+        let result = try await service.restoreStaged(file: file, at: repo.path)
+            if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+            await loadRepositoryData(for: repo)
+            return result
+    }
+    
+    @discardableResult
+    func stageSelected(files: [String], at repo: Repo) async throws -> GitResult {
+        guard !files.isEmpty else { return GitResult(output: "", error: "", exitCode: 0) }
+        var lastResult: GitResult? = nil
+        for file in files {
             let result = try await service.add(file: file, at: repo.path)
+            lastResult = result
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                throw GitError.executionFailed(extractErrorMessage(from: result))
             }
+        }
+        await loadRepositoryData(for: repo)
+        return lastResult!
+    }
+    
+    @discardableResult
+    func discardAllChanges(at repo: Repo) async throws -> GitResult {
+        let result = try await service.discardChanges(at: repo.path)
+            if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func unstage(file: String, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.restoreStaged(file: file, at: repo.path)
+    func discardChange(for file: ChangedFile, at repo: Repo) async throws -> GitResult {
+        let result = try await service.discardChange(for: file, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func stageSelected(files: [String], at repo: Repo) async -> GitResult? {
-        do {
-            var lastResult: GitResult? = nil
-            for file in files {
-                let result = try await service.add(file: file, at: repo.path)
-                lastResult = result
-                if !result.isSuccess {
-                    self.errorMessage = extractErrorMessage(from: result)
-                    await loadRepositoryData(for: repo)
-                    return result
-                }
-            }
-            await loadRepositoryData(for: repo)
-            return lastResult
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
-    }
-    
-    @discardableResult
-    func discardAllChanges(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.discardChanges(at: repo.path)
+    func commitChanges(message: String, at repo: Repo) async throws -> GitResult {
+        let result = try await service.commit(message: message, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func discardChange(for file: ChangedFile, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.discardChange(for: file, at: repo.path)
+    func fetch(at repo: Repo) async throws -> GitResult {
+        let result = try await service.fetch(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func commitChanges(message: String, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.commit(message: message, at: repo.path)
+    func pull(at repo: Repo) async throws -> GitResult {
+        let result = try await service.pull(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func fetch(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.fetch(at: repo.path)
-            if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
-            await loadRepositoryData(for: repo)
-            return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
-    }
-    
-    @discardableResult
-    func pull(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.pull(at: repo.path)
-            if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
-            await loadRepositoryData(for: repo)
-            return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
-    }
-    
-    @discardableResult
-    func pull(name: String, rebase: Bool = false, at repo: Repo) async -> GitResult? {
-        do {
-            let result: GitResult
+    func pull(name: String, rebase: Bool = false, at repo: Repo) async throws -> GitResult {
+        let result: GitResult
             if rebase {
                 result = try await service.pull(branch: name, rebase: true, at: repo.path)
             } else {
                 result = try await service.pull(branch: name, at: repo.path)
             }
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func push(at repo: Repo) async -> GitResult? {
-        var result: GitResult
-        do {
-            if !currentBranch.isEmpty {
-                result = try await service.push(at: repo.path, branch: currentBranch)
-            } else {
-                result = try await service.push(at: repo.path)
-            }
-            if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
-            await loadRepositoryData(for: repo)
-            return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
+    func push(at repo: Repo) async throws -> GitResult {
+        let result: GitResult
+        if !currentBranch.isEmpty {
+            result = try await service.push(at: repo.path, branch: currentBranch)
+        } else {
+            result = try await service.push(at: repo.path)
         }
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
@@ -372,123 +316,83 @@ class ViewModel {
     }
     
     @discardableResult
-    func createBranch(name: String, from sourceBranch: String? = nil, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.createBranch(branch: name, from: sourceBranch, at: repo.path)
+    func createBranch(name: String, from sourceBranch: String? = nil, at repo: Repo) async throws -> GitResult {
+        let result = try await service.createBranch(branch: name, from: sourceBranch, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func revertCommit(_ hash: String, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.revert(commit: hash, at: repo.path)
+    func revertCommit(_ hash: String, at repo: Repo) async throws -> GitResult {
+        let result = try await service.revert(commit: hash, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func cherryPickCommit(_ hash: String, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.cherryPick(commit: hash, at: repo.path)
+    func cherryPickCommit(_ hash: String, at repo: Repo) async throws -> GitResult {
+        let result = try await service.cherryPick(commit: hash, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func cherryPickContinue(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.cherryPickContinue(at: repo.path)
+    func cherryPickContinue(at repo: Repo) async throws -> GitResult {
+        let result = try await service.cherryPickContinue(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func cherryPickAbort(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.cherryPickAbort(at: repo.path)
+    func cherryPickAbort(at repo: Repo) async throws -> GitResult {
+        let result = try await service.cherryPickAbort(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func cherryPickSkip(at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.cherryPickSkip(at: repo.path)
+    func cherryPickSkip(at repo: Repo) async throws -> GitResult {
+        let result = try await service.cherryPickSkip(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func deleteBranch(branch: String, force: Bool = false, isRemote: Bool = false, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.deleteBranch(branch: branch, force: force, isRemote: isRemote, at: repo.path)
+    func deleteBranch(branch: String, force: Bool = false, isRemote: Bool = false, at repo: Repo) async throws -> GitResult {
+        let result = try await service.deleteBranch(branch: branch, force: force, isRemote: isRemote, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     @discardableResult
-    func renameBranch(oldName: String, newName: String, isRemote: Bool = false, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.renameBranch(oldName: oldName, newName: newName, isRemote: isRemote, at: repo.path)
+    func renameBranch(oldName: String, newName: String, isRemote: Bool = false, at repo: Repo) async throws -> GitResult {
+        let result = try await service.renameBranch(oldName: oldName, newName: newName, isRemote: isRemote, at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
             await loadRepositoryData(for: repo)
             return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
-        }
     }
     
     // MARK: - Helper Methods

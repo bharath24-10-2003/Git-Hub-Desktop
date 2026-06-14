@@ -46,18 +46,20 @@ struct TopBar: View {
                     BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
                         self.error = nil
                         Task {
-                            let result = await viewModel.fetch(at: repo)
-                            if result?.isSuccess != true {
-                                self.error = viewModel.errorMessage
+                            do {
+                                _ = try await viewModel.fetch(at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }
                     BaseButton(title: "Pull", image: Image(.pull)) {
                         self.error = nil
                         Task {
-                            let result = await viewModel.pull(at: repo)
-                            if result?.isSuccess != true {
-                                self.error = viewModel.errorMessage
+                            do {
+                                _ = try await viewModel.pull(at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }
@@ -65,11 +67,12 @@ struct TopBar: View {
                         self.error = nil
                         Task {
                             viewModel.isLoading = true
-                            let result = await viewModel.push(at: repo)
-                            viewModel.isLoading = false
-                            if result?.isSuccess != true {
-                                self.error = viewModel.errorMessage
+                            do {
+                                _ = try await viewModel.push(at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
                             }
+                            viewModel.isLoading = false
                         }
                     }
                 }

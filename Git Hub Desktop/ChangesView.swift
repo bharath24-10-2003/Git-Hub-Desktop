@@ -61,27 +61,30 @@ struct ChangesView: View {
             SmallButton(title: "Abort", tint: .red) {
                 self.error = nil
                 Task {
-                    let result = await viewModel.cherryPickAbort(at: repo)
-                    if result?.isSuccess != true {
-                        self.error = viewModel.errorMessage
+                    do {
+                        _ = try await viewModel.cherryPickAbort(at: repo)
+                    } catch {
+                        self.error = error.localizedDescription
                     }
                 }
             }
             SmallButton(title: "Skip", tint: .orange) {
                 self.error = nil
                 Task {
-                    let result = await viewModel.cherryPickSkip(at: repo)
-                    if result?.isSuccess != true {
-                        self.error = viewModel.errorMessage
+                    do {
+                        _ = try await viewModel.cherryPickSkip(at: repo)
+                    } catch {
+                        self.error = error.localizedDescription
                     }
                 }
             }
             SmallProminentButton(title: "Continue") {
                 self.error = nil
                 Task {
-                    let result = await viewModel.cherryPickContinue(at: repo)
-                    if result?.isSuccess != true {
-                        self.error = viewModel.errorMessage
+                    do {
+                        _ = try await viewModel.cherryPickContinue(at: repo)
+                    } catch {
+                        self.error = error.localizedDescription
                     }
                 }
             }
@@ -108,12 +111,12 @@ struct ChangesView: View {
                     guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
                     Task {
-                        let result = await viewModel.commitChanges(message: commitMessage, at: repo)
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.commitChanges(message: commitMessage, at: repo)
                             commitMessage = ""
                             selectedFiles.removeAll()
-                        } else {
-                            self.error = viewModel.errorMessage
+                        } catch {
+                            self.error = error.localizedDescription
                         }
                     }
                 }
@@ -139,31 +142,32 @@ struct ChangesView: View {
                     SmallButton(title: "Stage All") {
                         self.error = nil
                         Task {
-                            let result = await viewModel.stageAll(at: repo)
-                            if result?.isSuccess != true {
-                                self.error = viewModel.errorMessage
+                            do {
+                                _ = try await viewModel.stageAll(at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }
                     SmallButton(title: "Stage Selected ") {
                         self.error = nil
                         Task {
-                            let result = await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
-                            if result?.isSuccess == true {
+                            do {
+                                _ = try await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
                                 selectedFiles.removeAll()
-                            } else {
-                                self.error = viewModel.errorMessage
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }
                     SmallButton(title: "Discard All", tint: .red) {
                         self.error = nil
                         Task {
-                            let result = await viewModel.discardAllChanges(at: repo)
-                            if result?.isSuccess == true {
+                            do {
+                                _ = try await viewModel.discardAllChanges(at: repo)
                                 selectedFiles.removeAll()
-                            } else {
-                                self.error = viewModel.errorMessage
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }
@@ -192,27 +196,30 @@ struct ChangesView: View {
                                 if file.isStaged {
                                     SmallButton(title: "Unstage") {
                                         Task {
-                                            let result = await viewModel.unstage(file: file.path, at: repo)
-                                            if result?.isSuccess != true {
-                                                self.error = viewModel.errorMessage
+                                            do {
+                                                _ = try await viewModel.unstage(file: file.path, at: repo)
+                                            } catch {
+                                                self.error = error.localizedDescription
                                             }
                                         }
                                     }
                                 } else {
                                     SmallButton(title: "Stage", tint: .blue) {
                                         Task {
-                                            let result = await viewModel.stage(file: file.path, at: repo)
-                                            if result?.isSuccess != true {
-                                                self.error = viewModel.errorMessage
+                                            do {
+                                                _ = try await viewModel.stage(file: file.path, at: repo)
+                                            } catch {
+                                                self.error = error.localizedDescription
                                             }
                                         }
                                     }
                                 }
                                 SmallButton(title: "Discard", tint: .red) {
                                     Task {
-                                        let result = await viewModel.discardChange(for: file, at: repo)
-                                        if result?.isSuccess != true {
-                                            self.error = viewModel.errorMessage
+                                        do {
+                                            _ = try await viewModel.discardChange(for: file, at: repo)
+                                        } catch {
+                                            self.error = error.localizedDescription
                                         }
                                     }
                                 }

@@ -42,11 +42,15 @@ struct BranchesView: View {
                     BaseButton(title: "Switch to '\(selected)'") {
                         self.error = nil
                         Task {
-                            let result = try await viewModel.checkout(branch: selected, at: repo)
-                            if result.isSuccess == true {
-                                selectedBranch = nil
-                            } else {
-                                self.error = viewModel.errorMessage
+                            do {
+                                let result = try await viewModel.checkout(branch: selected, at: repo)
+                                if result.isSuccess == true {
+                                    selectedBranch = nil
+                                } else {
+                                    self.error = viewModel.errorMessage
+                                }
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }

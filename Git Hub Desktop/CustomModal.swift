@@ -71,11 +71,11 @@ struct CloneModal: View {
                         guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         self.error = nil
                         Task {
-                            let result = await viewModel.cloneRepo(url: url, destinationPath: path)
-                            if result?.isSuccess == true {
+                            do {
+                                _ = try await viewModel.cloneRepo(url: url, destinationPath: path)
                                 viewModel.showCloneModal = false
-                            } else {
-                                self.error = viewModel.errorMessage
+                            } catch {
+                                self.error = error.localizedDescription
                             }
                         }
                     }
@@ -346,11 +346,11 @@ struct NewBranchModal: View {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
                     Task {
-                        let result = await viewModel.createBranch(name: branchName, from: sourceBranch, at: repo)
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.createBranch(name: branchName, from: sourceBranch, at: repo)
                             viewModel.showNewBranchModal = false
-                        } else {
-                            self.error = viewModel.errorMessage
+                        } catch {
+                            self.error = error.localizedDescription
                         }
                     }
                 }
@@ -399,11 +399,11 @@ struct PullBranchModal: View {
                 BaseButton(title: "Rebase") {
                     self.error = nil
                     Task {
-                        let result = await viewModel.pull(name: sourceBranch, rebase: true, at: repo)
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.pull(name: sourceBranch, rebase: true, at: repo)
                             viewModel.showMergeModal = false
-                        } else {
-                            self.error = viewModel.errorMessage
+                        } catch {
+                            self.error = error.localizedDescription
                         }
                     }
                 }
@@ -411,11 +411,11 @@ struct PullBranchModal: View {
                 ProminentBaseButton(title: "Merge") {
                     self.error = nil
                     Task {
-                        let result = await viewModel.pull(name: sourceBranch, at: repo)
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.pull(name: sourceBranch, at: repo)
                             viewModel.showMergeModal = false
-                        } else {
-                            self.error = viewModel.errorMessage
+                        } catch {
+                            self.error = error.localizedDescription
                         }
                     }
                 }
@@ -479,13 +479,13 @@ struct DeleteBranchModal: View {
                     self.error = nil
                     Task {
                         isDeleting = true
-                        let result = await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, isRemote: viewModel.isRemoteBranchAction, at: repo)
-                        isDeleting = false
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, isRemote: viewModel.isRemoteBranchAction, at: repo)
                             viewModel.showDeleteBranchModal = false
-                        } else {
-                            self.error = viewModel.errorMessage
+                        } catch {
+                            self.error = error.localizedDescription
                         }
+                        isDeleting = false
                     }
                 }
                 .disabled(isDeleting)
@@ -537,11 +537,11 @@ struct RenameBranchModal: View {
                     guard !newBranchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
                     Task {
-                        let result = await viewModel.renameBranch(oldName: oldName, newName: newBranchName, isRemote: viewModel.isRemoteBranchAction, at: repo)
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.renameBranch(oldName: oldName, newName: newBranchName, isRemote: viewModel.isRemoteBranchAction, at: repo)
                             viewModel.showRenameBranchModal = false
-                        } else {
-                            self.error = viewModel.errorMessage
+                        } catch {
+                            self.error = error.localizedDescription
                         }
                     }
                 }

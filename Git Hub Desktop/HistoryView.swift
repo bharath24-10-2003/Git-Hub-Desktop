@@ -66,12 +66,12 @@ struct HistoryView: View {
                 BaseButton(title: "Cherry Pick") {
                     self.cherryPickError = nil
                     Task {
-                        let result = await viewModel.cherryPickCommit(cherryPickHash, at: repo)
-                        if result?.isSuccess == true {
+                        do {
+                            _ = try await viewModel.cherryPickCommit(cherryPickHash, at: repo)
                             showCherryPickModal = false
                             cherryPickHash = ""
-                        } else {
-                            self.cherryPickError = "Failed to cherry pick commit. You may have unresolved conflicts."
+                        } catch {
+                            self.cherryPickError = error.localizedDescription
                         }
                     }
                 }
@@ -124,9 +124,10 @@ struct HistoryCommitView: View {
                 Button {
                     self.revertError = nil
                     Task {
-                        let result = await viewModel.revertCommit(commit.id, at: repo)
-                        if result?.isSuccess != true {
-                            self.revertError = "Failed to revert commit."
+                        do {
+                            _ = try await viewModel.revertCommit(commit.id, at: repo)
+                        } catch {
+                            self.revertError = error.localizedDescription
                         }
                     }
                 } label: {
