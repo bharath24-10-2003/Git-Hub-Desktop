@@ -81,8 +81,8 @@ nonisolated final class GitService {
         let error = String(data: errorData, encoding: .utf8) ?? ""
         
         let result = GitResult(
-            output: output.trimmingCharacters(in: .whitespacesAndNewlines),
-            error: error.trimmingCharacters(in: .whitespacesAndNewlines),
+            output: output.trimmingCharacters(in: .newlines),
+            error: error.trimmingCharacters(in: .newlines),
             exitCode: process.terminationStatus
         )
         
