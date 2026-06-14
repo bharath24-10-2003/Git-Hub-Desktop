@@ -64,7 +64,9 @@ struct TopBar: View {
                     ProminentBaseButton(title: "Push", image: Image(.push)) {
                         self.error = nil
                         Task {
+                            viewModel.isLoading = true
                             let result = await viewModel.push(at: repo)
+                            viewModel.isLoading = false
                             if result?.isSuccess != true {
                                 self.error = viewModel.errorMessage
                             }
