@@ -49,6 +49,8 @@ class ViewModel {
     var showMergeModal: Bool = false
     var showRebaseModal: Bool = false
     
+    var selectedBranchForAction: String? = nil
+    
     init () {
         self.service = GitService()
         self.store = RepoStore()
@@ -360,9 +362,9 @@ class ViewModel {
     }
     
     @discardableResult
-    func createBranch(name: String, at repo: Repo) async -> GitResult? {
+    func createBranch(name: String, from sourceBranch: String? = nil, at repo: Repo) async -> GitResult? {
         do {
-            let result = try await service.createBranch(branch: name, at: repo.path)
+            let result = try await service.createBranch(branch: name, from: sourceBranch, at: repo.path)
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
             }

@@ -38,27 +38,26 @@ struct BranchesView: View {
             HStack {
                 TitleView(title: "Branches", desc: "Manage your Local and Remote branches here.")
                 Spacer()
-                if selectedBranch != viewModel.currentBranch {
-                    if let selected = selectedBranch {
-                        BaseButton(title: "Switch to '\(selected)'") {
-                            self.error = nil
-                            Task {
-                                let result = await viewModel.checkout(branch: selected, at: repo)
-                                if result?.isSuccess == true {
-                                    selectedBranch = nil
-                                } else {
-                                    self.error = "Failed to switch to '\(selected)'. Please commit or stash your changes first."
-                                }
+                if let selected = selectedBranch, selected != viewModel.currentBranch {
+                    BaseButton(title: "Switch to '\(selected)'") {
+                        self.error = nil
+                        Task {
+                            let result = await viewModel.checkout(branch: selected, at: repo)
+                            if result?.isSuccess == true {
+                                selectedBranch = nil
+                            } else {
+                                self.error = "Failed to switch to '\(selected)'. Please commit or stash your changes first."
                             }
                         }
                     }
-                }
-                
-                BaseButton(title: "Pull Branch") {
-                    viewModel.showMergeModal = true
+                    BaseButton(title: "Pull Branch") {
+                        viewModel.selectedBranchForAction = selected
+                        viewModel.showMergeModal = true
+                    }
                 }
                 
                 ProminentBaseButton(title: "New Branch", image: Image(.plus)) {
+                    viewModel.selectedBranchForAction = selectedBranch
                     viewModel.showNewBranchModal = true
                 }
                 .padding()

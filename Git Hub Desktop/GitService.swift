@@ -173,8 +173,12 @@ nonisolated extension GitService {
     }
     
     @discardableResult
-    func createBranch(branch: String, at repo: String) async throws -> GitResult {
-        try await run(["checkout", "-b", branch], at: repo)
+    func createBranch(branch: String, from sourceBranch: String? = nil, at repo: String) async throws -> GitResult {
+        if let sourceBranch = sourceBranch, !sourceBranch.isEmpty {
+            return try await run(["checkout", "-b", branch, sourceBranch], at: repo)
+        } else {
+            return try await run(["checkout", "-b", branch], at: repo)
+        }
     }
     
     func getLocalBranches(at repo: String) async throws -> [String] {

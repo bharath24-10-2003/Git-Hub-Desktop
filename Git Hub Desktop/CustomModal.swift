@@ -310,10 +310,11 @@ struct NewBranchModal: View {
     @State private var error: String?
     
     var body: some View {
+        let sourceBranch = viewModel.selectedBranchForAction ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
         VStack (alignment:.leading) {
             ModalDescription(
                 title: "Create New Branch",
-                description: "Enter a name for your new branch. This will branch off from the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'."
+                description: "Enter a name for your new branch. This will branch off from '\(sourceBranch)'."
             )
             
             if let error {
@@ -345,7 +346,7 @@ struct NewBranchModal: View {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
                     Task {
-                        let result = await viewModel.createBranch(name: branchName, at: repo)
+                        let result = await viewModel.createBranch(name: branchName, from: sourceBranch, at: repo)
                         if result?.isSuccess == true {
                             viewModel.showNewBranchModal = false
                         } else {
@@ -358,6 +359,9 @@ struct NewBranchModal: View {
         }
         .frame(width: 500)
         .padding()
+        .onDisappear {
+            viewModel.selectedBranchForAction = nil
+        }
     }
 }
 
@@ -366,14 +370,14 @@ struct PullBranchModal: View {
     let repo: Repo
     let viewModel: ViewModel
     
-    @State private var branchName: String = ""
     @State private var error: String?
     
     var body: some View {
+        let sourceBranch = viewModel.selectedBranchForAction ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
         VStack (alignment:.leading) {
             ModalDescription(
                 title: "Merge into current branch",
-                description: "Are you sure want to pull from \(branchName) into the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'?"
+                description: "Are you sure want to pull from '\(sourceBranch)' into the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'?"
             )
             
             if let error {
@@ -393,27 +397,25 @@ struct PullBranchModal: View {
                 }
                 
                 BaseButton(title: "Rebase") {
-                    guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
                     Task {
-                        let result = await viewModel.pull(name: branchName, rebase: true, at: repo)
+                        let result = await viewModel.pull(name: sourceBranch, rebase: true, at: repo)
                         if result?.isSuccess == true {
                             viewModel.showMergeModal = false
                         } else {
-                            self.error = "Failed to rebase from '\(branchName)'. You may have unresolved conflicts."
+                            self.error = "Failed to rebase from '\(sourceBranch)'. You may have unresolved conflicts."
                         }
                     }
                 }
                 
                 ProminentBaseButton(title: "Merge") {
-                    guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
                     Task {
-                        let result = await viewModel.pull(name: branchName, at: repo)
+                        let result = await viewModel.pull(name: sourceBranch, at: repo)
                         if result?.isSuccess == true {
                             viewModel.showMergeModal = false
                         } else {
-                            self.error = "Failed to merge '\(branchName)'. You may have unresolved conflicts."
+                            self.error = "Failed to merge '\(sourceBranch)'. You may have unresolved conflicts."
                         }
                     }
                 }
@@ -422,6 +424,9 @@ struct PullBranchModal: View {
         }
         .frame(width: 500)
         .padding()
+        .onDisappear {
+            viewModel.selectedBranchForAction = nil
+        }
     }
 }
 
