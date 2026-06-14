@@ -75,7 +75,7 @@ struct CloneModal: View {
                             if result?.isSuccess == true {
                                 viewModel.showCloneModal = false
                             } else {
-                                self.error = "Failed to clone repository. Please check the URL, path, and your connection."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
@@ -350,7 +350,7 @@ struct NewBranchModal: View {
                         if result?.isSuccess == true {
                             viewModel.showNewBranchModal = false
                         } else {
-                            self.error = "Failed to create new branch '\(branchName)'. A branch with this name might already exist."
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }
@@ -403,7 +403,7 @@ struct PullBranchModal: View {
                         if result?.isSuccess == true {
                             viewModel.showMergeModal = false
                         } else {
-                            self.error = "Failed to rebase from '\(sourceBranch)'. You may have unresolved conflicts."
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }
@@ -415,7 +415,7 @@ struct PullBranchModal: View {
                         if result?.isSuccess == true {
                             viewModel.showMergeModal = false
                         } else {
-                            self.error = "Failed to merge '\(sourceBranch)'. You may have unresolved conflicts."
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }
@@ -478,7 +478,7 @@ struct DeleteBranchModal: View {
                         if result?.isSuccess == true {
                             viewModel.showDeleteBranchModal = false
                         } else {
-                            self.error = "Failed to delete branch '\(branchToDelete)'. \(forceDelete ? "" : "It might have unmerged changes. Try force deleting.")"
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }

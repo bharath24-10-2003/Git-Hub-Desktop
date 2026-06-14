@@ -63,7 +63,7 @@ struct ChangesView: View {
                 Task {
                     let result = await viewModel.cherryPickAbort(at: repo)
                     if result?.isSuccess != true {
-                        self.error = "Failed to abort cherry pick."
+                        self.error = viewModel.errorMessage
                     }
                 }
             }
@@ -72,7 +72,7 @@ struct ChangesView: View {
                 Task {
                     let result = await viewModel.cherryPickSkip(at: repo)
                     if result?.isSuccess != true {
-                        self.error = "Failed to skip cherry pick."
+                        self.error = viewModel.errorMessage
                     }
                 }
             }
@@ -81,7 +81,7 @@ struct ChangesView: View {
                 Task {
                     let result = await viewModel.cherryPickContinue(at: repo)
                     if result?.isSuccess != true {
-                        self.error = "Failed to continue cherry pick. Have you staged your changes?"
+                        self.error = viewModel.errorMessage
                     }
                 }
             }
@@ -113,7 +113,7 @@ struct ChangesView: View {
                             commitMessage = ""
                             selectedFiles.removeAll()
                         } else {
-                            self.error = "Failed to commit changes. Please check if there are unresolved conflicts."
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }
@@ -141,7 +141,7 @@ struct ChangesView: View {
                         Task {
                             let result = await viewModel.stageAll(at: repo)
                             if result?.isSuccess != true {
-                                self.error = "Failed to stage all changes."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
@@ -152,7 +152,7 @@ struct ChangesView: View {
                             if result?.isSuccess == true {
                                 selectedFiles.removeAll()
                             } else {
-                                self.error = "Failed to stage selected files."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
@@ -163,7 +163,7 @@ struct ChangesView: View {
                             if result?.isSuccess == true {
                                 selectedFiles.removeAll()
                             } else {
-                                self.error = "Failed to discard all changes."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
@@ -194,7 +194,7 @@ struct ChangesView: View {
                                         Task {
                                             let result = await viewModel.unstage(file: file.path, at: repo)
                                             if result?.isSuccess != true {
-                                                self.error = "Failed to unstage \(file.path)."
+                                                self.error = viewModel.errorMessage
                                             }
                                         }
                                     }
@@ -203,7 +203,7 @@ struct ChangesView: View {
                                         Task {
                                             let result = await viewModel.stage(file: file.path, at: repo)
                                             if result?.isSuccess != true {
-                                                self.error = "Failed to stage \(file.path)."
+                                                self.error = viewModel.errorMessage
                                             }
                                         }
                                     }
@@ -212,7 +212,7 @@ struct ChangesView: View {
                                     Task {
                                         let result = await viewModel.discardChange(for: file, at: repo)
                                         if result?.isSuccess != true {
-                                            self.error = "Failed to discard changes for \(file.path)."
+                                            self.error = viewModel.errorMessage
                                         }
                                     }
                                 }

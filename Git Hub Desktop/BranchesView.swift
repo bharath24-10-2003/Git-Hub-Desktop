@@ -46,7 +46,7 @@ struct BranchesView: View {
                             if result.isSuccess == true {
                                 selectedBranch = nil
                             } else {
-                                self.error = "Failed to switch to '\(selected)'. Please commit or stash your changes first."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }

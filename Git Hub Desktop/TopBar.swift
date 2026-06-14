@@ -48,7 +48,7 @@ struct TopBar: View {
                         Task {
                             let result = await viewModel.fetch(at: repo)
                             if result?.isSuccess != true {
-                                self.error = "Failed to fetch from remote. Please check your network connection."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
@@ -57,7 +57,7 @@ struct TopBar: View {
                         Task {
                             let result = await viewModel.pull(at: repo)
                             if result?.isSuccess != true {
-                                self.error = "Failed to pull from remote. Please resolve any conflicts or check your connection."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
@@ -66,7 +66,7 @@ struct TopBar: View {
                         Task {
                             let result = await viewModel.push(at: repo)
                             if result?.isSuccess != true {
-                                self.error = "Failed to push to remote. Please check if you need to pull first."
+                                self.error = viewModel.errorMessage
                             }
                         }
                     }
