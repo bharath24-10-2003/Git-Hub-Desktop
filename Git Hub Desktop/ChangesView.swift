@@ -17,21 +17,83 @@ struct ChangesView: View {
     @State private var error: String?
 
     var body: some View {
-        
-        if viewModel.changedFiles.isEmpty {
-            NoChangesView()
-        } else {
-            VStack {
-                commitSection
+        VStack(spacing: 16) {
+            if viewModel.isCherryPicking {
                 if let error {
                     ErrorBannerView(message: error) {
                         self.error = nil
                     }
                     .padding(.horizontal)
+                    .padding(.top)
                 }
-                modifiedSection
+                cherryPickSection
+                    .padding(.top, error == nil ? 16 : 0)
+            }
+            
+            if viewModel.changedFiles.isEmpty {
+                NoChangesView()
+            } else {
+                VStack {
+                    commitSection
+                    if !viewModel.isCherryPicking, let error {
+                        ErrorBannerView(message: error) {
+                            self.error = nil
+                        }
+                        .padding(.horizontal)
+                    }
+                    modifiedSection
+                }
             }
         }
+    }
+    
+    var cherryPickSection: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Cherry Pick in Progress")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+                Text("Resolve conflicts and stage files to continue, or abort/skip.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            SmallButton(title: "Abort", tint: .red) {
+                self.error = nil
+                Task {
+                    let result = await viewModel.cherryPickAbort(at: repo)
+                    if result?.isSuccess != true {
+                        self.error = "Failed to abort cherry pick."
+                    }
+                }
+            }
+            SmallButton(title: "Skip", tint: .orange) {
+                self.error = nil
+                Task {
+                    let result = await viewModel.cherryPickSkip(at: repo)
+                    if result?.isSuccess != true {
+                        self.error = "Failed to skip cherry pick."
+                    }
+                }
+            }
+            SmallProminentButton(title: "Continue") {
+                self.error = nil
+                Task {
+                    let result = await viewModel.cherryPickContinue(at: repo)
+                    if result?.isSuccess != true {
+                        self.error = "Failed to continue cherry pick. Have you staged your changes?"
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+        )
+        .padding(.horizontal)
     }
     
     var commitSection: some View {

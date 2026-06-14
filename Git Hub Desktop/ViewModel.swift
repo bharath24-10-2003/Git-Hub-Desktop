@@ -39,6 +39,7 @@ class ViewModel {
     
     var isCloning: Bool = false
     var isLoading: Bool = false
+    var isCherryPicking: Bool = false
     var errorMessage: String? = nil
     
     // MARK: - Presentation Flags
@@ -105,11 +106,16 @@ class ViewModel {
             // 4. Log history
             let commitHistory = try await service.log(at: path)
             
+            // 5. Check if cherry-pick is in progress
+            let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
+            let isCherryPickInProgress = FileManager.default.fileExists(atPath: cherryPickPath)
+            
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
             self.currentBranch = detectedCurrentBranch
             self.changedFiles = files
             self.commits = commitHistory
+            self.isCherryPicking = isCherryPickInProgress
             
             // Update active branch name in RepoStore so it persists
             if let index = store.repos.firstIndex(where: { $0.id == repo.id }) {
@@ -387,6 +393,51 @@ class ViewModel {
     func cherryPickCommit(_ hash: String, at repo: Repo) async -> GitResult? {
         do {
             let result = try await service.cherryPick(commit: hash, at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+            return result
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+    
+    @discardableResult
+    func cherryPickContinue(at repo: Repo) async -> GitResult? {
+        do {
+            let result = try await service.cherryPickContinue(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+            return result
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+    
+    @discardableResult
+    func cherryPickAbort(at repo: Repo) async -> GitResult? {
+        do {
+            let result = try await service.cherryPickAbort(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+            return result
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+    
+    @discardableResult
+    func cherryPickSkip(at repo: Repo) async -> GitResult? {
+        do {
+            let result = try await service.cherryPickSkip(at: repo.path)
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
             }
