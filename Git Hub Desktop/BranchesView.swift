@@ -42,8 +42,8 @@ struct BranchesView: View {
                     BaseButton(title: "Switch to '\(selected)'") {
                         self.error = nil
                         Task {
-                            let result = await viewModel.checkout(branch: selected, at: repo)
-                            if result?.isSuccess == true {
+                            let result = try await viewModel.checkout(branch: selected, at: repo)
+                            if result.isSuccess == true {
                                 selectedBranch = nil
                             } else {
                                 self.error = "Failed to switch to '\(selected)'. Please commit or stash your changes first."
@@ -97,6 +97,19 @@ struct BranchesView: View {
                                 .onTapGesture {
                                     selectedBranch = branch
                                 }
+                                .contextMenu {
+                                    Button("Delete") {
+                                        viewModel.selectedBranchForAction = branch
+                                        viewModel.showDeleteBranchModal = true
+                                    }
+                                } preview: {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(branch)
+                                            .font(Font.system(size: 16, weight: .semibold))
+                                    }
+                                    .padding(10)
+                                }
+
                         }
                         .padding(.horizontal)
                     }

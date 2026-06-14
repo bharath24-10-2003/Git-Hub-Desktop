@@ -166,10 +166,13 @@ nonisolated extension GitService {
     func fetch(at repo:String) async throws -> GitResult {
         try await run(["fetch"], at: repo)
     }
-    
     @discardableResult
-    func checkout(branch: String, at repo: String) async throws -> GitResult {
-        try await run(["checkout", branch], at: repo)
+    func checkout(branch: String, trackRemote: Bool = false, at repo: String) async throws -> GitResult {
+        if trackRemote {
+            return try await run(["checkout", "-t", branch], at: repo)
+        } else {
+            return try await run(["checkout", branch], at: repo)
+        }
     }
     
     @discardableResult
@@ -181,6 +184,15 @@ nonisolated extension GitService {
         }
     }
     
+    @discardableResult
+    func deleteBranch(branch: String, force: Bool = false, at repo: String) async throws -> GitResult {
+        if force {
+            return try await run(["branch", "-D", branch], at: repo)
+        } else {
+            return try await run(["branch", "-d", branch], at: repo)
+        }
+    }
+    
     func getLocalBranches(at repo: String) async throws -> [String] {
         let result = try await run(["branch", "-l"], at: repo)
         return result.output.split(separator: "\n").map(String.init)
@@ -188,7 +200,9 @@ nonisolated extension GitService {
     
     func getRemoteBranches(at repo: String) async throws -> [String] {
         let result = try await run(["branch", "-r"], at: repo)
-        return result.output.split(separator: "\n").map(String.init)
+        return result.output.split(separator: "\n")
+            .map(String.init)
+            .filter { !$0.contains("->") }
     }
     // MARK: - Rebase
     

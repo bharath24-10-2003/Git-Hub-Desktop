@@ -433,3 +433,62 @@ struct PullBranchModal: View {
 #Preview {
     PullBranchModal(repo: Repo(name: "Bharath", path: "usr/local", currentBranch: "main"), viewModel: ViewModel())
 }
+
+struct DeleteBranchModal: View {
+    
+    let repo: Repo
+    let viewModel: ViewModel
+    
+    @State private var error: String?
+    @State private var forceDelete: Bool = false
+    
+    var body: some View {
+        let branchToDelete = viewModel.selectedBranchForAction ?? ""
+        VStack (alignment:.leading) {
+            ModalDescription(
+                title: "Delete Branch",
+                description: "Are you sure you want to delete the branch '\(branchToDelete)'? This action cannot be undone."
+            )
+            
+            if let error {
+                ErrorBannerView(message: error) {
+                    self.error = nil
+                }
+            }
+            
+            Divider()
+                .padding(.horizontal, -16)
+                .padding(.vertical)
+                
+            Toggle("Force delete (unmerged changes will be lost)", isOn: $forceDelete)
+                .toggleStyle(.checkbox)
+                .font(Font.system(size: 14))
+                .padding(.bottom, 20)
+
+            HStack {
+                Spacer()
+                BaseButton(title: "Cancel") {
+                    viewModel.showDeleteBranchModal = false
+                }
+                
+                ProminentBaseButton(title: "Delete", textTint: .white) {
+                    self.error = nil
+                    Task {
+                        let result = await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, at: repo)
+                        if result?.isSuccess == true {
+                            viewModel.showDeleteBranchModal = false
+                        } else {
+                            self.error = "Failed to delete branch '\(branchToDelete)'. \(forceDelete ? "" : "It might have unmerged changes. Try force deleting.")"
+                        }
+                    }
+                }
+            }
+            .padding(.top, 10)
+        }
+        .frame(width: 500)
+        .padding()
+        .onDisappear {
+            viewModel.selectedBranchForAction = nil
+        }
+    }
+}

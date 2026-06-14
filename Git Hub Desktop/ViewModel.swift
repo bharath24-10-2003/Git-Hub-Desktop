@@ -48,6 +48,7 @@ class ViewModel {
     var showNewBranchModal: Bool = false
     var showMergeModal: Bool = false
     var showRebaseModal: Bool = false
+    var showDeleteBranchModal: Bool = false
     
     var selectedBranchForAction: String? = nil
     
@@ -347,18 +348,20 @@ class ViewModel {
     }
     
     @discardableResult
-    func checkout(branch: String, at repo: Repo) async -> GitResult? {
-        do {
-            let result = try await service.checkout(branch: branch, at: repo.path)
-            if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
-            }
-            await loadRepositoryData(for: repo)
-            return result
-        } catch {
-            self.errorMessage = error.localizedDescription
-            return nil
+    func checkout(branch: String, at repo: Repo) async throws -> GitResult {
+        let result: GitResult
+        if remoteBranches.contains(branch) && !localBranches.contains(branch) {
+            result = try await service.checkout(branch: branch, trackRemote: true, at: repo.path)
+        } else {
+            result = try await service.checkout(branch: branch, at: repo.path)
         }
+        
+        if !result.isSuccess {
+            throw GitError.executionFailed(result.error)
+        }
+        
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
@@ -440,6 +443,21 @@ class ViewModel {
     func cherryPickSkip(at repo: Repo) async -> GitResult? {
         do {
             let result = try await service.cherryPickSkip(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+            return result
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+    
+    @discardableResult
+    func deleteBranch(branch: String, force: Bool = false, at repo: Repo) async -> GitResult? {
+        do {
+            let result = try await service.deleteBranch(branch: branch, force: force, at: repo.path)
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
             }
