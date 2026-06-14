@@ -13,6 +13,7 @@ struct HistoryView: View {
     let viewModel: ViewModel
     @State var showCherryPickModal: Bool = false
     @State var cherryPickHash: String = ""
+    @State var cherryPickError: String?
     
     var body: some View {
         VStack {
@@ -49,22 +50,37 @@ struct HistoryView: View {
         VStack(alignment: .leading ,spacing: 20) {
             ModalDescription(title: "Cherry Pick", description: "Enter the commit hash")
                 .padding()
+            
+            if let cherryPickError {
+                ErrorBannerView(message: cherryPickError) {
+                    self.cherryPickError = nil
+                }
+                .padding(.horizontal)
+            }
+            
             Divider()
             CustomTextField(url: $cherryPickHash,imageName: "number", placeholder: "Enter the commit hash")
                 .padding(.horizontal)
             Divider()
             HStack {
                 BaseButton(title: "Cherry Pick") {
+                    self.cherryPickError = nil
                     Task {
                         let result = await viewModel.cherryPickCommit(cherryPickHash, at: repo)
-                        if let result, !result.isSuccess {
-                            print("Cherry pick failed:", result.error)
+                        if let result, result.isSuccess {
+                            showCherryPickModal = false
+                            cherryPickHash = ""
+                        } else if let result {
+                            self.cherryPickError = result.error.isEmpty ? result.output : result.error
+                        } else {
+                            self.cherryPickError = viewModel.errorMessage ?? "Cherry pick failed"
                         }
                     }
                 }
                 .padding(.trailing, 24)
                 BaseButton(title: "Close") {
                     showCherryPickModal = false
+                    cherryPickError = nil
                 }
             }
             .padding()
@@ -76,48 +92,63 @@ struct HistoryCommitView: View {
     let commit: Commit
     let repo: Repo
     let viewModel: ViewModel
+    @State private var revertError: String?
     
     var body: some View {
-        HStack {
-            Text(authorInitial)
-                .frame(width: 44, height: 44)
-                .font(Font.system(size: 18, weight: .bold, design: .rounded))
-                .background(Circle().opacity(0.15))
-            VStack(alignment: .leading) {
-                Text(commit.message)
-                    .font(Font.system(size: 14,weight: .semibold))
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text (commit.displayDate)
-                            .font(Font.system(size: 11,weight: .regular))
-                        Text(commit.displayTime)
-                            .font(Font.system(size: 11,weight: .regular))
-                    }
-                    .padding(.trailing, 24)
-                    Button {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(commit.id, forType: .string)
-                    } label: {
-                        Text (commit.shortHash)
-                            .font(.caption)
-                            .frame(width: 60)
+        VStack(spacing: 0) {
+            HStack {
+                Text(authorInitial)
+                    .frame(width: 44, height: 44)
+                    .font(Font.system(size: 18, weight: .bold, design: .rounded))
+                    .background(Circle().opacity(0.15))
+                VStack(alignment: .leading) {
+                    Text(commit.message)
+                        .font(Font.system(size: 14,weight: .semibold))
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text (commit.displayDate)
+                                .font(Font.system(size: 11,weight: .regular))
+                            Text(commit.displayTime)
+                                .font(Font.system(size: 11,weight: .regular))
+                        }
+                        .padding(.trailing, 24)
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(commit.id, forType: .string)
+                        } label: {
+                            Text (commit.shortHash)
+                                .font(.caption)
+                                .frame(width: 60)
+                        }
                     }
                 }
-            }
-            Spacer()
-            Button {
-                Task {
-                    await viewModel.revertCommit(commit.id, at: repo)
+                Spacer()
+                Button {
+                    self.revertError = nil
+                    Task {
+                        let result = await viewModel.revertCommit(commit.id, at: repo)
+                        if let result, !result.isSuccess {
+                            self.revertError = result.error.isEmpty ? result.output : result.error
+                        }
+                    }
+                } label: {
+                    Text("Revert")
+                        .padding(3)
                 }
-            } label: {
-                Text("Revert")
-                    .padding(3)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .buttonStyle(.glass)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .buttonStyle(.glass)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            
+            if let revertError {
+                ErrorBannerView(message: revertError) {
+                    self.revertError = nil
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+            }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
         .overlay {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.gray, lineWidth: 1)

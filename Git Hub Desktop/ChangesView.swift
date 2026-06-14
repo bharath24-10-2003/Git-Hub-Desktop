@@ -14,6 +14,7 @@ struct ChangesView: View {
 
     @State private var commitMessage: String = ""
     @State private var selectedFiles = Set<String>()
+    @State private var error: String?
 
     var body: some View {
         
@@ -22,6 +23,12 @@ struct ChangesView: View {
         } else {
             VStack {
                 commitSection
+                if let error {
+                    ErrorBannerView(message: error) {
+                        self.error = nil
+                    }
+                    .padding(.horizontal)
+                }
                 modifiedSection
             }
         }
@@ -37,10 +44,17 @@ struct ChangesView: View {
                     .padding(.leading)
                 SmallProminentButton(title: "Commit") {
                     guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    self.error = nil
                     Task {
-                        await viewModel.commitChanges(message: commitMessage, at: repo)
-                        commitMessage = ""
-                        selectedFiles.removeAll()
+                        let result = await viewModel.commitChanges(message: commitMessage, at: repo)
+                        if let result, result.isSuccess {
+                            commitMessage = ""
+                            selectedFiles.removeAll()
+                        } else if let result {
+                            self.error = result.error.isEmpty ? result.output : result.error
+                        } else {
+                            self.error = viewModel.errorMessage ?? "Commit failed"
+                        }
                     }
                 }
             }
@@ -63,20 +77,34 @@ struct ChangesView: View {
                         .font(.headline)
                     Spacer()
                     SmallButton(title: "Stage All") {
+                        self.error = nil
                         Task {
-                            await viewModel.stageAll(at: repo)
+                            let result = await viewModel.stageAll(at: repo)
+                            if let result, !result.isSuccess {
+                                self.error = result.error.isEmpty ? result.output : result.error
+                            }
                         }
                     }
                     SmallButton(title: "Stage Selected ") {
+                        self.error = nil
                         Task {
-                            await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
-                            selectedFiles.removeAll()
+                            let result = await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
+                            if let result, !result.isSuccess {
+                                self.error = result.error.isEmpty ? result.output : result.error
+                            } else {
+                                selectedFiles.removeAll()
+                            }
                         }
                     }
                     SmallButton(title: "Discard All", tint: .red) {
+                        self.error = nil
                         Task {
-                            await viewModel.discardAllChanges(at: repo)
-                            selectedFiles.removeAll()
+                            let result = await viewModel.discardAllChanges(at: repo)
+                            if let result, !result.isSuccess {
+                                self.error = result.error.isEmpty ? result.output : result.error
+                            } else {
+                                selectedFiles.removeAll()
+                            }
                         }
                     }
                 }
@@ -123,7 +151,10 @@ struct ChangesView: View {
                             .contextMenu {
                                 Button(role: .destructive) {
                                     Task {
-                                        await viewModel.discardChange(for: file, at: repo)
+                                        let result = await viewModel.discardChange(for: file, at: repo)
+                                        if let result, !result.isSuccess {
+                                            self.error = result.error.isEmpty ? result.output : result.error
+                                        }
                                     }
                                 } label: {
                                     Label("Discard Changes", systemImage: "trash")
@@ -132,7 +163,10 @@ struct ChangesView: View {
                                 if file.isStaged {
                                     Button {
                                         Task {
-                                            await viewModel.unstage(file: file.path, at: repo)
+                                            let result = await viewModel.unstage(file: file.path, at: repo)
+                                            if let result, !result.isSuccess {
+                                                self.error = result.error.isEmpty ? result.output : result.error
+                                            }
                                         }
                                     } label: {
                                         Label("Unstage File", systemImage: "minus.square")
@@ -140,7 +174,10 @@ struct ChangesView: View {
                                 } else {
                                     Button {
                                         Task {
-                                            await viewModel.stage(file: file.path, at: repo)
+                                            let result = await viewModel.stage(file: file.path, at: repo)
+                                            if let result, !result.isSuccess {
+                                                self.error = result.error.isEmpty ? result.output : result.error
+                                            }
                                         }
                                     } label: {
                                         Label("Stage File", systemImage: "plus.square")

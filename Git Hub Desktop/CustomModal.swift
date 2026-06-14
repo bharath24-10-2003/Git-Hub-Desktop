@@ -19,6 +19,12 @@ struct CloneModal: View {
         VStack (alignment:.leading) {
             ModalDescription(title: "Clone Repository", description: "Enter the URL of the GitHub remote repository and the local path where you want to clone the repository.")
             
+            if let error {
+                ErrorBannerView(message: error) {
+                    self.error = nil
+                }
+            }
+            
             Divider()
                 .padding(.horizontal, -16)
                 .padding(.vertical)
@@ -57,22 +63,21 @@ struct CloneModal: View {
                 .padding(.top, 10)
             } else {
                 HStack (alignment:.center) {
-                    if let error = error {
-                        Text(error)
-                            .foregroundColor(.red)
-                    }
                     Spacer()
                     BaseButton(title: "Close") {
                         viewModel.showCloneModal = false
                     }
-                ProminentBaseButton(title: "Clone Repository") {
+                    ProminentBaseButton(title: "Clone Repository") {
                         guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                        self.error = nil
                         Task {
                             let result = await viewModel.cloneRepo(url: url, destinationPath: path)
                             if let result, result.isSuccess {
                                 viewModel.showCloneModal = false
+                            } else if let result {
+                                self.error = result.error.isEmpty ? result.output : result.error
                             } else {
-                                error = result?.error 
+                                self.error = viewModel.errorMessage ?? "Clone failed"
                             }
                         }
                     }
@@ -256,12 +261,55 @@ struct ModalDescription: View {
     }
 }
 
+// MARK: - Reusable Error Banner
+
+struct ErrorBannerView: View {
+    
+    let message: String
+    var onDismiss: (() -> Void)? = nil
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+                .font(.system(size: 14))
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.red)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+            Spacer()
+            if let onDismiss {
+                Button {
+                    onDismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.red.opacity(0.6))
+                        .font(.system(size: 14))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.red.opacity(0.1))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(.red.opacity(0.3), lineWidth: 1)
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+}
+
 struct NewBranchModal: View {
     
     let repo: Repo
     let viewModel: ViewModel
     
     @State private var branchName: String = ""
+    @State private var error: String?
     
     var body: some View {
         VStack (alignment:.leading) {
@@ -269,6 +317,12 @@ struct NewBranchModal: View {
                 title: "Create New Branch",
                 description: "Enter a name for your new branch. This will branch off from the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'."
             )
+            
+            if let error {
+                ErrorBannerView(message: error) {
+                    self.error = nil
+                }
+            }
             
             Divider()
                 .padding(.horizontal, -16)
@@ -291,10 +345,15 @@ struct NewBranchModal: View {
                 }
                 ProminentBaseButton(title: "Create Branch") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    self.error = nil
                     Task {
                         let result = await viewModel.createBranch(name: branchName, at: repo)
                         if let result, result.isSuccess {
                             viewModel.showNewBranchModal = false
+                        } else if let result {
+                            self.error = result.error.isEmpty ? result.output : result.error
+                        } else {
+                            self.error = viewModel.errorMessage ?? "Failed to create branch"
                         }
                     }
                 }
@@ -322,18 +381,9 @@ struct PullBranchModal: View {
             )
             
             if let error {
-                Text(error)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.red)
-                    .padding(10)
-                    .background {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(.red.opacity(0.1))
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(.red.opacity(0.3), lineWidth: 1)
-                    }
+                ErrorBannerView(message: error) {
+                    self.error = nil
+                }
             }
             
             Divider()
@@ -348,6 +398,7 @@ struct PullBranchModal: View {
                 
                 BaseButton(title: "Rebase") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    self.error = nil
                     Task {
                         let result = await viewModel.pull(name: branchName, rebase: true, at: repo)
                         if let result, result.isSuccess {
@@ -355,13 +406,14 @@ struct PullBranchModal: View {
                         } else if let result {
                             self.error = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.error = viewModel.errorMessage
+                            self.error = viewModel.errorMessage ?? "Rebase failed"
                         }
                     }
                 }
                 
                 ProminentBaseButton(title: "Merge") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    self.error = nil
                     Task {
                         let result = await viewModel.pull(name: branchName, at: repo)
                         if let result, result.isSuccess {
@@ -369,7 +421,7 @@ struct PullBranchModal: View {
                         } else if let result {
                             self.error = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.error = viewModel.errorMessage
+                            self.error = viewModel.errorMessage ?? "Merge failed"
                         }
                     }
                 }
