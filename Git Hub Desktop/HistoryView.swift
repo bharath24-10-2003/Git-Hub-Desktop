@@ -67,13 +67,11 @@ struct HistoryView: View {
                     self.cherryPickError = nil
                     Task {
                         let result = await viewModel.cherryPickCommit(cherryPickHash, at: repo)
-                        if let result, result.isSuccess {
+                        if result?.isSuccess == true {
                             showCherryPickModal = false
                             cherryPickHash = ""
-                        } else if let result {
-                            self.cherryPickError = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.cherryPickError = viewModel.errorMessage ?? "Cherry pick failed"
+                            self.cherryPickError = "Failed to cherry pick commit. You may have unresolved conflicts."
                         }
                     }
                 }
@@ -127,8 +125,8 @@ struct HistoryCommitView: View {
                     self.revertError = nil
                     Task {
                         let result = await viewModel.revertCommit(commit.id, at: repo)
-                        if let result, !result.isSuccess {
-                            self.revertError = result.error.isEmpty ? result.output : result.error
+                        if result?.isSuccess != true {
+                            self.revertError = "Failed to revert commit."
                         }
                     }
                 } label: {

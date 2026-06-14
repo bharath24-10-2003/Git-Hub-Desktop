@@ -44,12 +44,10 @@ struct BranchesView: View {
                         self.error = nil
                         Task {
                             let result = await viewModel.checkout(branch: selected, at: repo)
-                            if let result, result.isSuccess {
+                            if result?.isSuccess == true {
                                 selectedBranch = nil
-                            } else if let result {
-                                self.error = result.error.isEmpty ? result.output : result.error
                             } else {
-                                self.error = viewModel.errorMessage ?? "Checkout failed"
+                                self.error = "Failed to switch to '\(selected)'. Please commit or stash your changes first."
                             }
                         }
                     }

@@ -47,13 +47,11 @@ struct ChangesView: View {
                     self.error = nil
                     Task {
                         let result = await viewModel.commitChanges(message: commitMessage, at: repo)
-                        if let result, result.isSuccess {
+                        if result?.isSuccess == true {
                             commitMessage = ""
                             selectedFiles.removeAll()
-                        } else if let result {
-                            self.error = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.error = viewModel.errorMessage ?? "Commit failed"
+                            self.error = "Failed to commit changes. Please check if there are unresolved conflicts."
                         }
                     }
                 }
@@ -80,8 +78,8 @@ struct ChangesView: View {
                         self.error = nil
                         Task {
                             let result = await viewModel.stageAll(at: repo)
-                            if let result, !result.isSuccess {
-                                self.error = result.error.isEmpty ? result.output : result.error
+                            if result?.isSuccess != true {
+                                self.error = "Failed to stage all changes."
                             }
                         }
                     }
@@ -89,10 +87,10 @@ struct ChangesView: View {
                         self.error = nil
                         Task {
                             let result = await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
-                            if let result, !result.isSuccess {
-                                self.error = result.error.isEmpty ? result.output : result.error
-                            } else {
+                            if result?.isSuccess == true {
                                 selectedFiles.removeAll()
+                            } else {
+                                self.error = "Failed to stage selected files."
                             }
                         }
                     }
@@ -100,10 +98,10 @@ struct ChangesView: View {
                         self.error = nil
                         Task {
                             let result = await viewModel.discardAllChanges(at: repo)
-                            if let result, !result.isSuccess {
-                                self.error = result.error.isEmpty ? result.output : result.error
-                            } else {
+                            if result?.isSuccess == true {
                                 selectedFiles.removeAll()
+                            } else {
+                                self.error = "Failed to discard all changes."
                             }
                         }
                     }
@@ -152,8 +150,8 @@ struct ChangesView: View {
                                 Button(role: .destructive) {
                                     Task {
                                         let result = await viewModel.discardChange(for: file, at: repo)
-                                        if let result, !result.isSuccess {
-                                            self.error = result.error.isEmpty ? result.output : result.error
+                                        if result?.isSuccess != true {
+                                            self.error = "Failed to discard changes for \(file.path)."
                                         }
                                     }
                                 } label: {
@@ -164,8 +162,8 @@ struct ChangesView: View {
                                     Button {
                                         Task {
                                             let result = await viewModel.unstage(file: file.path, at: repo)
-                                            if let result, !result.isSuccess {
-                                                self.error = result.error.isEmpty ? result.output : result.error
+                                            if result?.isSuccess != true {
+                                                self.error = "Failed to unstage \(file.path)."
                                             }
                                         }
                                     } label: {
@@ -175,8 +173,8 @@ struct ChangesView: View {
                                     Button {
                                         Task {
                                             let result = await viewModel.stage(file: file.path, at: repo)
-                                            if let result, !result.isSuccess {
-                                                self.error = result.error.isEmpty ? result.output : result.error
+                                            if result?.isSuccess != true {
+                                                self.error = "Failed to stage \(file.path)."
                                             }
                                         }
                                     } label: {

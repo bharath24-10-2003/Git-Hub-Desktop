@@ -72,12 +72,10 @@ struct CloneModal: View {
                         self.error = nil
                         Task {
                             let result = await viewModel.cloneRepo(url: url, destinationPath: path)
-                            if let result, result.isSuccess {
+                            if result?.isSuccess == true {
                                 viewModel.showCloneModal = false
-                            } else if let result {
-                                self.error = result.error.isEmpty ? result.output : result.error
                             } else {
-                                self.error = viewModel.errorMessage ?? "Clone failed"
+                                self.error = "Failed to clone repository. Please check the URL, path, and your connection."
                             }
                         }
                     }
@@ -348,12 +346,10 @@ struct NewBranchModal: View {
                     self.error = nil
                     Task {
                         let result = await viewModel.createBranch(name: branchName, at: repo)
-                        if let result, result.isSuccess {
+                        if result?.isSuccess == true {
                             viewModel.showNewBranchModal = false
-                        } else if let result {
-                            self.error = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.error = viewModel.errorMessage ?? "Failed to create branch"
+                            self.error = "Failed to create new branch '\(branchName)'. A branch with this name might already exist."
                         }
                     }
                 }
@@ -401,12 +397,10 @@ struct PullBranchModal: View {
                     self.error = nil
                     Task {
                         let result = await viewModel.pull(name: branchName, rebase: true, at: repo)
-                        if let result, result.isSuccess {
+                        if result?.isSuccess == true {
                             viewModel.showMergeModal = false
-                        } else if let result {
-                            self.error = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.error = viewModel.errorMessage ?? "Rebase failed"
+                            self.error = "Failed to rebase from '\(branchName)'. You may have unresolved conflicts."
                         }
                     }
                 }
@@ -416,12 +410,10 @@ struct PullBranchModal: View {
                     self.error = nil
                     Task {
                         let result = await viewModel.pull(name: branchName, at: repo)
-                        if let result, result.isSuccess {
+                        if result?.isSuccess == true {
                             viewModel.showMergeModal = false
-                        } else if let result {
-                            self.error = result.error.isEmpty ? result.output : result.error
                         } else {
-                            self.error = viewModel.errorMessage ?? "Merge failed"
+                            self.error = "Failed to merge '\(branchName)'. You may have unresolved conflicts."
                         }
                     }
                 }
