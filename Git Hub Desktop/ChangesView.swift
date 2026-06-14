@@ -189,6 +189,33 @@ struct ChangesView: View {
                                         .foregroundStyle(statusColor(for: file.status).opacity(0.8))
                                 }
                                 Spacer()
+                                if file.isStaged {
+                                    SmallButton(title: "Unstage") {
+                                        Task {
+                                            let result = await viewModel.unstage(file: file.path, at: repo)
+                                            if result?.isSuccess != true {
+                                                self.error = "Failed to unstage \(file.path)."
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    SmallButton(title: "Stage", tint: .blue) {
+                                        Task {
+                                            let result = await viewModel.stage(file: file.path, at: repo)
+                                            if result?.isSuccess != true {
+                                                self.error = "Failed to stage \(file.path)."
+                                            }
+                                        }
+                                    }
+                                }
+                                SmallButton(title: "Discard", tint: .red) {
+                                    Task {
+                                        let result = await viewModel.discardChange(for: file, at: repo)
+                                        if result?.isSuccess != true {
+                                            self.error = "Failed to discard changes for \(file.path)."
+                                        }
+                                    }
+                                }
                                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                                     .foregroundStyle(isSelected ? .blue : .secondary)
                                     .font(Font.system(size: 16))
@@ -206,42 +233,6 @@ struct ChangesView: View {
                                 if isSelected {
                                     RoundedRectangle(cornerRadius: 10)
                                         .opacity(0.1)
-                                }
-                            }
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    Task {
-                                        let result = await viewModel.discardChange(for: file, at: repo)
-                                        if result?.isSuccess != true {
-                                            self.error = "Failed to discard changes for \(file.path)."
-                                        }
-                                    }
-                                } label: {
-                                    Label("Discard Changes", systemImage: "trash")
-                                }
-                                
-                                if file.isStaged {
-                                    Button {
-                                        Task {
-                                            let result = await viewModel.unstage(file: file.path, at: repo)
-                                            if result?.isSuccess != true {
-                                                self.error = "Failed to unstage \(file.path)."
-                                            }
-                                        }
-                                    } label: {
-                                        Label("Unstage File", systemImage: "minus.square")
-                                    }
-                                } else {
-                                    Button {
-                                        Task {
-                                            let result = await viewModel.stage(file: file.path, at: repo)
-                                            if result?.isSuccess != true {
-                                                self.error = "Failed to stage \(file.path)."
-                                            }
-                                        }
-                                    } label: {
-                                        Label("Stage File", systemImage: "plus.square")
-                                    }
                                 }
                             }
                             
@@ -280,10 +271,6 @@ struct NoChangesView : View {
     var body: some View {
     
         VStack {
-            Image(systemName: "nosign")
-                .frame(width: 150, height: 150)
-                .font(Font.system(size: 100, weight: .bold))
-                .foregroundColor(.secondary)
             Text("No changes done yet for commit")
                 .font(Font.system(size: 50, weight: .bold))
                 .foregroundColor(.secondary)
@@ -358,12 +345,12 @@ struct TitleView: View {
     }
 }
 #Preview {
-//    let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
-//    ChangesView(repo: repo)
-//        .frame(width: 1000)
-//        .overlay {
-//            RoundedRectangle(cornerRadius: 20)
-//                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-//        }
-//        .padding()
+    let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
+    ChangesView(repo: repo, viewModel: ViewModel())
+        .frame(width: 500)
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+        }
+        .padding()
 }
