@@ -334,8 +334,13 @@ class ViewModel {
     
     @discardableResult
     func push(at repo: Repo) async -> GitResult? {
+        var result: GitResult
         do {
-            let result = try await service.push(at: repo.path)
+            if !currentBranch.isEmpty {
+                result = try await service.push(at: repo.path, branch: currentBranch)
+            } else {
+                result = try await service.push(at: repo.path)
+            }
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
             }

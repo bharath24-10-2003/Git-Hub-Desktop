@@ -130,8 +130,12 @@ nonisolated extension GitService {
     
     // Push / Pull
     @discardableResult
-    func push(at repo: String) async throws -> GitResult {
-        try await run(["push"], at: repo)
+    func push(at repo: String, branch: String? = nil) async throws -> GitResult {
+        if let branch {
+            return try await run(["push", "origin", branch], at: repo)
+        } else {
+            return try await run(["push"], at: repo)
+        }
     }
     
     @discardableResult
