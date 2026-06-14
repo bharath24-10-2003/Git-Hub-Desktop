@@ -11,11 +11,16 @@ struct HistoryView: View {
     
     let repo: Repo
     let viewModel: ViewModel
+    @State var showCherryPickModal: Bool = false
+    @State var cherryPickHash: String = ""
     
     var body: some View {
         VStack {
             HStack {
                 TitleView(title: "History", desc: "All commits in \(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch) branch")
+                BaseButton(title: "Cherry pick") {
+                    showCherryPickModal = true
+                }
                 BaseButton(title: "Refresh") {
                     Task {
                         await viewModel.loadRepositoryData(for: repo)
@@ -25,16 +30,47 @@ struct HistoryView: View {
             }
             
             ScrollView(.vertical, showsIndicators: false) {
-                ForEach(viewModel.commits) { commit in
-                    HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
+                LazyVStack(spacing: 0) {
+                    ForEach(viewModel.commits) { commit in
+                        HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
+                            .padding(-10)
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .padding(.bottom, 14)
+            .sheet(isPresented: $showCherryPickModal) {
+                cherryPickModal
+            }
+        }
+    }
+    
+    public var cherryPickModal: some View {
+        VStack(alignment: .leading ,spacing: 20) {
+            ModalDescription(title: "Cherry Pick", description: "Enter the commit hash")
+                .padding()
+            Divider()
+            CustomTextField(url: $cherryPickHash,imageName: "number", placeholder: "Enter the commit hash")
+                .padding(.horizontal)
+            Divider()
+            HStack {
+                BaseButton(title: "Cherry Pick") {
+                    Task {
+                        let result = await viewModel.cherryPickCommit(cherryPickHash, at: repo)
+                        if let result, !result.isSuccess {
+                            print("Cherry pick failed:", result.error)
+                        }
+                    }
+                }
+                .padding(.trailing, 24)
+                BaseButton(title: "Close") {
+                    showCherryPickModal = false
+                }
+            }
+            .padding()
         }
     }
 }
-
 struct HistoryCommitView: View {
     
     let commit: Commit
@@ -71,7 +107,7 @@ struct HistoryCommitView: View {
             Spacer()
             Button {
                 Task {
-                    try? await viewModel.revertCommit(commit.id, at: repo)
+                    await viewModel.revertCommit(commit.id, at: repo)
                 }
             } label: {
                 Text("Revert")
@@ -79,17 +115,6 @@ struct HistoryCommitView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .buttonStyle(.glass)
-            
-            Button {
-                Task {
-                    try? await viewModel.cherryPickCommit(commit.id, at: repo)
-                }
-            } label: {
-                Text("Cherry pick")
-                    .padding(3)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .buttonStyle(.glassProminent)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

@@ -38,7 +38,7 @@ struct ChangesView: View {
                 SmallProminentButton(title: "Commit") {
                     guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     Task {
-                        try? await viewModel.commitChanges(message: commitMessage, at: repo)
+                        await viewModel.commitChanges(message: commitMessage, at: repo)
                         commitMessage = ""
                         selectedFiles.removeAll()
                     }
@@ -64,18 +64,18 @@ struct ChangesView: View {
                     Spacer()
                     SmallButton(title: "Stage All") {
                         Task {
-                            try? await viewModel.stageAll(at: repo)
+                            await viewModel.stageAll(at: repo)
                         }
                     }
                     SmallButton(title: "Stage Selected ") {
                         Task {
-                            try? await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
+                            await viewModel.stageSelected(files: Array(selectedFiles), at: repo)
                             selectedFiles.removeAll()
                         }
                     }
                     SmallButton(title: "Discard All", tint: .red) {
                         Task {
-                            try? await viewModel.discardAllChanges(at: repo)
+                            await viewModel.discardAllChanges(at: repo)
                             selectedFiles.removeAll()
                         }
                     }
@@ -123,7 +123,7 @@ struct ChangesView: View {
                             .contextMenu {
                                 Button(role: .destructive) {
                                     Task {
-                                        try? await viewModel.discardChange(for: file, at: repo)
+                                        await viewModel.discardChange(for: file, at: repo)
                                     }
                                 } label: {
                                     Label("Discard Changes", systemImage: "trash")
@@ -132,7 +132,7 @@ struct ChangesView: View {
                                 if file.isStaged {
                                     Button {
                                         Task {
-                                            try? await viewModel.unstage(file: file.path, at: repo)
+                                            await viewModel.unstage(file: file.path, at: repo)
                                         }
                                     } label: {
                                         Label("Unstage File", systemImage: "minus.square")
@@ -140,7 +140,7 @@ struct ChangesView: View {
                                 } else {
                                     Button {
                                         Task {
-                                            try? await viewModel.stage(file: file.path, at: repo)
+                                            await viewModel.stage(file: file.path, at: repo)
                                         }
                                     } label: {
                                         Label("Stage File", systemImage: "plus.square")

@@ -29,7 +29,7 @@ enum GitError: Error, LocalizedError {
 
 // MARK: - Git Service
 
-final class GitService {
+nonisolated final class GitService {
     
     private let gitPath = "/usr/bin/git"
     
@@ -89,7 +89,6 @@ final class GitService {
         print("GitService: Finished with exitCode: \(result.exitCode)")
         if !result.isSuccess {
             print("GitService: Error Output: '\(result.error)'")
-            throw GitError.executionFailed(result.error.isEmpty ? (result.output.isEmpty ? "Unknown Git error" : result.output) : result.error)
         }
         
         return result
@@ -98,10 +97,11 @@ final class GitService {
 
 // MARK: - High-Level APIs
 
-extension GitService {
+nonisolated extension GitService {
     
     // Clone
-    func clone(url: String, to path: String) async throws {
+    @discardableResult
+    func clone(url: String, to path: String) async throws -> GitResult {
         try await run(["clone", url, path])
     }
     
@@ -112,37 +112,44 @@ extension GitService {
     }
     
     // Add
-    func addAll(at repo: String) async throws {
+    @discardableResult
+    func addAll(at repo: String) async throws -> GitResult {
         try await run(["add", "."], at: repo)
     }
     
-    func add(file: String, at repo: String) async throws {
+    @discardableResult
+    func add(file: String, at repo: String) async throws -> GitResult {
         try await run(["add", file], at: repo)
     }
     
     // Commit
-    func commit(message: String, at repo: String) async throws {
+    @discardableResult
+    func commit(message: String, at repo: String) async throws -> GitResult {
         try await run(["commit", "-m", message], at: repo)
     }
     
     // Push / Pull
-    func push(at repo: String) async throws {
+    @discardableResult
+    func push(at repo: String) async throws -> GitResult {
         try await run(["push"], at: repo)
     }
     
-    func forcePush(at repo: String) async throws {
+    @discardableResult
+    func forcePush(at repo: String) async throws -> GitResult {
         try await run(["push", "--force"], at: repo)
     }
     
-    func pull(at repo: String) async throws {
+    @discardableResult
+    func pull(at repo: String) async throws -> GitResult {
         try await run(["pull"], at: repo)
     }
     
-    func pull(branch: String, rebase: Bool = false, at repo: String) async throws {
+    @discardableResult
+    func pull(branch: String, rebase: Bool = false, at repo: String) async throws -> GitResult {
         if rebase {
-            try await run(["pull", "--rebase", "origin", branch], at: repo)
+            return try await run(["pull", "--rebase", "origin", branch], at: repo)
         } else {
-            try await run(["pull", "origin", branch], at: repo)
+            return try await run(["pull", "origin", branch], at: repo)
         }
     }
     // Log
@@ -155,15 +162,18 @@ extension GitService {
         return parseLog(result.output)
     }
     
-    func fetch(at repo:String) async throws {
+    @discardableResult
+    func fetch(at repo:String) async throws -> GitResult {
         try await run(["fetch"], at: repo)
     }
     
-    func checkout(branch: String, at repo: String) async throws {
+    @discardableResult
+    func checkout(branch: String, at repo: String) async throws -> GitResult {
         try await run(["checkout", branch], at: repo)
     }
     
-    func createBranch(branch: String, at repo: String) async throws {
+    @discardableResult
+    func createBranch(branch: String, at repo: String) async throws -> GitResult {
         try await run(["checkout", "-b", branch], at: repo)
     }
     
@@ -178,42 +188,50 @@ extension GitService {
     }
     // MARK: - Rebase
     
-    func rebaseContinue(at repo: String) async throws {
+    @discardableResult
+    func rebaseContinue(at repo: String) async throws -> GitResult {
         try await run(["rebase", "--continue"], at: repo)
     }
     
-    func rebaseAbort(at repo: String) async throws {
+    @discardableResult
+    func rebaseAbort(at repo: String) async throws -> GitResult {
         try await run(["rebase", "--abort"], at: repo)
     }
     
-    func rebaseSkip(at repo: String) async throws {
+    @discardableResult
+    func rebaseSkip(at repo: String) async throws -> GitResult {
         try await run(["rebase", "--skip"], at: repo)
     }
     // MARK: - Cherry-pick
     
-    func cherryPick(commit: String, at repo: String) async throws {
+    func cherryPick(commit: String, at repo: String) async throws -> GitResult {
         try await run(["cherry-pick", commit], at: repo)
     }
     
-    func cherryPickContinue(at repo: String) async throws {
+    @discardableResult
+    func cherryPickContinue(at repo: String) async throws -> GitResult {
         try await run(["cherry-pick", "--continue"], at: repo)
     }
     
-    func cherryPickAbort(at repo: String) async throws {
+    @discardableResult
+    func cherryPickAbort(at repo: String) async throws -> GitResult {
         try await run(["cherry-pick", "--abort"], at: repo)
     }
     
-    func cherryPickSkip(at repo: String) async throws {
+    @discardableResult
+    func cherryPickSkip(at repo: String) async throws -> GitResult {
         try await run(["cherry-pick", "--skip"], at: repo)
     }
     
     // MARK: - Tags
     
-    func createTag(name: String, at repo: String) async throws {
+    @discardableResult
+    func createTag(name: String, at repo: String) async throws -> GitResult {
         try await run(["tag", name], at: repo)
     }
     
-    func pushTag(name: String, at repo: String) async throws {
+    @discardableResult
+    func pushTag(name: String, at repo: String) async throws -> GitResult {
         try await run(["push", "origin", name], at: repo)
     }
     
@@ -294,30 +312,37 @@ extension GitService {
     
     // MARK: - Revert
     
-    func revert(commit: String, at repo: String) async throws {
+    @discardableResult
+    func revert(commit: String, at repo: String) async throws -> GitResult {
         try await run(["revert", "--no-edit", commit], at: repo)
     }
     
     // MARK: - Discard and Unstage
     
-    func restoreStaged(file: String, at repo: String) async throws {
+    @discardableResult
+    func restoreStaged(file: String, at repo: String) async throws -> GitResult {
         try await run(["restore", "--staged", file], at: repo)
     }
     
-    func discardChanges(at repo: String) async throws {
-        try await run(["restore", "."], at: repo)
-        try await run(["clean", "-df"], at: repo)
+    @discardableResult
+    func discardChanges(at repo: String) async throws -> GitResult {
+        let restoreResult = try await run(["restore", "."], at: repo)
+        guard restoreResult.isSuccess else { return restoreResult }
+        return try await run(["clean", "-df"], at: repo)
     }
     
-    func discardChange(for file: ChangedFile, at repo: String) async throws {
+    @discardableResult
+    func discardChange(for file: ChangedFile, at repo: String) async throws -> GitResult {
         if file.isStaged {
-            try await restoreStaged(file: file.path, at: repo)
+            let unstageResult = try await restoreStaged(file: file.path, at: repo)
+            guard unstageResult.isSuccess else { return unstageResult }
         }
         if file.status == "Untracked" {
             let fileURL = URL(fileURLWithPath: repo).appendingPathComponent(file.path)
             try? FileManager.default.removeItem(at: fileURL)
+            return GitResult(output: "", error: "", exitCode: 0)
         } else {
-            try await run(["restore", file.path], at: repo)
+            return try await run(["restore", file.path], at: repo)
         }
     }
 }

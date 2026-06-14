@@ -42,17 +42,17 @@ struct TopBar: View {
                 
                 BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
                     Task {
-                        try? await viewModel.fetch(at: repo)
+                        await viewModel.fetch(at: repo)
                     }
                 }
                 BaseButton(title: "Pull", image: Image(.pull)) {
                     Task {
-                        try? await viewModel.pull(at: repo)
+                        await viewModel.pull(at: repo)
                     }
                 }
                 ProminentBaseButton(title: "Push", image: Image(.push)) {
                     Task {
-                        try? await viewModel.push(at: repo)
+                        await viewModel.push(at: repo)
                     }
                 }
             }

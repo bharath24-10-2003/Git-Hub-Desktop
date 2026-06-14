@@ -83,6 +83,7 @@ struct ContentView: View {
                 PullBranchModal(repo: repo, viewModel: viewModel)
             }
         }
+        .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes
         }

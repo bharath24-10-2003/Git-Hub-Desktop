@@ -13,6 +13,7 @@ struct CloneModal: View {
     
     @State private var url: String = ""
     @State private var path: String = ""
+    @State private var error: String?
     
     var body: some View {
         VStack (alignment:.leading) {
@@ -56,15 +57,23 @@ struct CloneModal: View {
                 .padding(.top, 10)
             } else {
                 HStack (alignment:.center) {
+                    if let error = error {
+                        Text(error)
+                            .foregroundColor(.red)
+                    }
                     Spacer()
                     BaseButton(title: "Close") {
                         viewModel.showCloneModal = false
                     }
-                    ProminentBaseButton(title: "Clone Repository") {
+                ProminentBaseButton(title: "Clone Repository") {
                         guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         Task {
-                            try? await viewModel.cloneRepo(url: url, destinationPath: path)
-                            viewModel.showCloneModal = false
+                            let result = await viewModel.cloneRepo(url: url, destinationPath: path)
+                            if let result, result.isSuccess {
+                                viewModel.showCloneModal = false
+                            } else {
+                                error = result?.error 
+                            }
                         }
                     }
                 }
@@ -283,8 +292,10 @@ struct NewBranchModal: View {
                 ProminentBaseButton(title: "Create Branch") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     Task {
-                        try? await viewModel.createBranch(name: branchName, at: repo)
-                        viewModel.showNewBranchModal = false
+                        let result = await viewModel.createBranch(name: branchName, at: repo)
+                        if let result, result.isSuccess {
+                            viewModel.showNewBranchModal = false
+                        }
                     }
                 }
             }
@@ -338,11 +349,13 @@ struct PullBranchModal: View {
                 BaseButton(title: "Rebase") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     Task {
-                        do {
-                            try await viewModel.pull(name: branchName, rebase: true, at: repo)
+                        let result = await viewModel.pull(name: branchName, rebase: true, at: repo)
+                        if let result, result.isSuccess {
                             viewModel.showMergeModal = false
-                        } catch {
-                            self.error = error.localizedDescription
+                        } else if let result {
+                            self.error = result.error.isEmpty ? result.output : result.error
+                        } else {
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }
@@ -350,11 +363,13 @@ struct PullBranchModal: View {
                 ProminentBaseButton(title: "Merge") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     Task {
-                        do {
-                            try await viewModel.pull(name: branchName, at: repo)
+                        let result = await viewModel.pull(name: branchName, at: repo)
+                        if let result, result.isSuccess {
                             viewModel.showMergeModal = false
-                        } catch {
-                            self.error = error.localizedDescription
+                        } else if let result {
+                            self.error = result.error.isEmpty ? result.output : result.error
+                        } else {
+                            self.error = viewModel.errorMessage
                         }
                     }
                 }

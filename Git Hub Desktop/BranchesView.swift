@@ -41,7 +41,7 @@ struct BranchesView: View {
                 if let selected = selectedBranch {
                     BaseButton(title: "Switch to '\(selected)'") {
                         Task {
-                            try? await viewModel.checkout(branch: selected, at: repo)
+                            await viewModel.checkout(branch: selected, at: repo)
                             selectedBranch = nil
                         }
                     }
