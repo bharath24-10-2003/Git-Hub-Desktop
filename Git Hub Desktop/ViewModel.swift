@@ -49,8 +49,10 @@ class ViewModel {
     var showMergeModal: Bool = false
     var showRebaseModal: Bool = false
     var showDeleteBranchModal: Bool = false
+    var showRenameBranchModal: Bool = false
     
     var selectedBranchForAction: String? = nil
+    var isRemoteBranchAction: Bool = false
     
     init () {
         self.service = GitService()
@@ -460,9 +462,24 @@ class ViewModel {
     }
     
     @discardableResult
-    func deleteBranch(branch: String, force: Bool = false, at repo: Repo) async -> GitResult? {
+    func deleteBranch(branch: String, force: Bool = false, isRemote: Bool = false, at repo: Repo) async -> GitResult? {
         do {
-            let result = try await service.deleteBranch(branch: branch, force: force, at: repo.path)
+            let result = try await service.deleteBranch(branch: branch, force: force, isRemote: isRemote, at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+            return result
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+    
+    @discardableResult
+    func renameBranch(oldName: String, newName: String, isRemote: Bool = false, at repo: Repo) async -> GitResult? {
+        do {
+            let result = try await service.renameBranch(oldName: oldName, newName: newName, isRemote: isRemote, at: repo.path)
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
             }

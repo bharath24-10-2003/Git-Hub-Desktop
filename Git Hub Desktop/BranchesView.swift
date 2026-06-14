@@ -98,8 +98,14 @@ struct BranchesView: View {
                                     selectedBranch = branch
                                 }
                                 .contextMenu {
+                                    Button("Rename") {
+                                        viewModel.selectedBranchForAction = branch
+                                        viewModel.isRemoteBranchAction = false
+                                        viewModel.showRenameBranchModal = true
+                                    }
                                     Button("Delete") {
                                         viewModel.selectedBranchForAction = branch
+                                        viewModel.isRemoteBranchAction = false
                                         viewModel.showDeleteBranchModal = true
                                     }
                                 } preview: {
@@ -145,6 +151,24 @@ struct BranchesView: View {
                             BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
                                 .onTapGesture {
                                     selectedBranch = branch
+                                }
+                                .contextMenu {
+                                    Button("Rename") {
+                                        viewModel.selectedBranchForAction = branch
+                                        viewModel.isRemoteBranchAction = true
+                                        viewModel.showRenameBranchModal = true
+                                    }
+                                    Button("Delete") {
+                                        viewModel.selectedBranchForAction = branch
+                                        viewModel.isRemoteBranchAction = true
+                                        viewModel.showDeleteBranchModal = true
+                                    }
+                                } preview: {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(branch)
+                                            .font(Font.system(size: 16, weight: .semibold))
+                                    }
+                                    .padding(10)
                                 }
                         }
                         .padding(.horizontal)

@@ -474,9 +474,65 @@ struct DeleteBranchModal: View {
                 ProminentBaseButton(title: "Delete", textTint: .white) {
                     self.error = nil
                     Task {
-                        let result = await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, at: repo)
+                        let result = await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, isRemote: viewModel.isRemoteBranchAction, at: repo)
                         if result?.isSuccess == true {
                             viewModel.showDeleteBranchModal = false
+                        } else {
+                            self.error = viewModel.errorMessage
+                        }
+                    }
+                }
+            }
+            .padding(.top, 10)
+        }
+        .frame(width: 500)
+        .padding()
+        .onDisappear {
+            viewModel.selectedBranchForAction = nil
+        }
+    }
+}
+
+struct RenameBranchModal: View {
+    
+    let repo: Repo
+    let viewModel: ViewModel
+    
+    @State private var newBranchName: String = ""
+    @State private var error: String?
+    
+    var body: some View {
+        let oldName = viewModel.selectedBranchForAction ?? ""
+        VStack(alignment: .leading, spacing: 10) {
+            ModalDescription(
+                title: "Rename Branch",
+                description: "Enter a new name for the branch '\(oldName)'."
+            )
+            
+            if let error {
+                ErrorBannerView(message: error) {
+                    self.error = nil
+                }
+            }
+            
+            TextField("New branch name", text: $newBranchName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding(.top, 5)
+            
+            HStack {
+                Spacer()
+                
+                BaseButton(title: "Cancel") {
+                    viewModel.showRenameBranchModal = false
+                }
+                
+                ProminentBaseButton(title: "Rename", textTint: .white) {
+                    guard !newBranchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    self.error = nil
+                    Task {
+                        let result = await viewModel.renameBranch(oldName: oldName, newName: newBranchName, isRemote: viewModel.isRemoteBranchAction, at: repo)
+                        if result?.isSuccess == true {
+                            viewModel.showRenameBranchModal = false
                         } else {
                             self.error = viewModel.errorMessage
                         }

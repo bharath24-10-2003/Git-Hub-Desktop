@@ -65,6 +65,11 @@ struct ContentView: View {
                 DeleteBranchModal(repo: repo, viewModel: viewModel)
             }
         }
+        .sheet(isPresented: $viewModel.showRenameBranchModal) {
+            if let repo = viewModel.selectedRepo {
+                RenameBranchModal(repo: repo, viewModel: viewModel)
+            }
+        }
         .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes

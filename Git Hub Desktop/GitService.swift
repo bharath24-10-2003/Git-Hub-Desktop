@@ -189,11 +189,33 @@ nonisolated extension GitService {
     }
     
     @discardableResult
-    func deleteBranch(branch: String, force: Bool = false, at repo: String) async throws -> GitResult {
-        if force {
-            return try await run(["branch", "-D", branch], at: repo)
+    func deleteBranch(branch: String, force: Bool = false, isRemote: Bool = false, at repo: String) async throws -> GitResult {
+        if isRemote {
+            let parts = branch.split(separator: "/", maxSplits: 1)
+            guard parts.count == 2 else { throw GitError.executionFailed("Invalid remote branch name") }
+            let remote = String(parts[0])
+            let remoteBranch = String(parts[1])
+            return try await run(["push", remote, "--delete", remoteBranch], at: repo)
         } else {
-            return try await run(["branch", "-d", branch], at: repo)
+            if force {
+                return try await run(["branch", "-D", branch], at: repo)
+            } else {
+                return try await run(["branch", "-d", branch], at: repo)
+            }
+        }
+    }
+    
+    @discardableResult
+    func renameBranch(oldName: String, newName: String, isRemote: Bool = false, at repo: String) async throws -> GitResult {
+        if isRemote {
+            let parts = oldName.split(separator: "/", maxSplits: 1)
+            guard parts.count == 2 else { throw GitError.executionFailed("Invalid remote branch name") }
+            let remote = String(parts[0])
+            let remoteBranch = String(parts[1])
+            _ = try await run(["push", remote, "\(oldName):refs/heads/\(newName)"], at: repo)
+            return try await run(["push", remote, "--delete", remoteBranch], at: repo)
+        } else {
+            return try await run(["branch", "-m", oldName, newName], at: repo)
         }
     }
     
