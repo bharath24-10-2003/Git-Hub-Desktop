@@ -267,6 +267,74 @@ nonisolated extension GitService {
         try await run(["cherry-pick", "--skip"], at: repo)
     }
     
+    func stash(at repo: String, message: String? = nil) async throws -> GitResult {
+        if let message {
+            return try await run(["stash","-m", message], at: repo)
+        } else {
+            return try await run(["stash"], at: repo)
+        }
+    }
+    
+    func popStash(at repo: String, index: Int? = nil) async throws -> GitResult {
+        if let index {
+            return try await run(["stash", "pop", "stash@{\(index)}"], at: repo)
+        } else {
+            return try await run(["stash", "pop"], at: repo)
+        }
+    }
+    
+    func applyStash(at repo: String, index: Int? = nil) async throws -> GitResult {
+        if let index {
+            return try await run(["stash", "apply", "stash@{\(index)}"], at: repo)
+        } else {
+            return try await run(["stash", "apply"], at: repo)
+        }
+    }
+    
+    func dropStash(at repo: String, index: Int? = nil) async throws -> GitResult {
+        if let index {
+            return try await run(["stash", "drop", "stash@{\(index)}"], at: repo)
+        } else {
+            return try await run(["stash", "drop"], at: repo)
+        }
+    }
+
+    func showStashList(at repo: String) async throws -> [GitStash] {
+        let result = try await run(["stash", "list"], at: repo)
+        
+        let results = result.output
+            .split(separator: "\n")
+            .compactMap { parseStash(String($0)) }
+        dump(results)
+        return results
+    }
+
+    private func parseStash(_ line: String) -> GitStash? {
+        let pattern = #"^(stash@\{\d+\}):\s+(WIP on|On)\s+(.+?):\s*(.*)$"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(
+                  in: line,
+                  range: NSRange(line.startIndex..., in: line)
+              ) else {
+            return nil
+        }
+
+        func value(at index: Int) -> String {
+            guard let range = Range(match.range(at: index), in: line) else {
+                return ""
+            }
+            return String(line[range])
+        }
+
+        return GitStash(
+            id: value(at: 1),
+            type: value(at: 2),
+            branch: value(at: 3),
+            message: value(at: 4)
+        )
+    }
+    
     // MARK: - Tags
     
     @discardableResult

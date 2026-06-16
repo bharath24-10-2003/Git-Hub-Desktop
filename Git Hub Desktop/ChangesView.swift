@@ -139,6 +139,19 @@ struct ChangesView: View {
                     Text("Modified Changes")
                         .font(.headline)
                     Spacer()
+                    SmallButton(title: "Stash") {
+                        self.error = nil
+                        Task {
+                            do {
+                                let result = try await viewModel.stash(at: repo)
+                                if result.isSuccess {
+                                    self.error = result.error
+                                }
+                            } catch {
+                                self.error = error.localizedDescription
+                            }
+                        }
+                    }
                     SmallButton(title: "Stage All") {
                         self.error = nil
                         Task {

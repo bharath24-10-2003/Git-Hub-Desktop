@@ -37,12 +37,6 @@ struct TopBar: View {
                     .padding(8)
                     Spacer()
                     
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .padding(.trailing, 10)
-                    }
-                    
                     BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
                         self.error = nil
                         Task {

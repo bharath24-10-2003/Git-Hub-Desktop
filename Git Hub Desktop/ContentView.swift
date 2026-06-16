@@ -11,6 +11,7 @@ struct ContentView: View {
 
     var viewModel: ViewModel
     @State private var selectedSection: RepoSection = .changes
+    @State var isLoading: Bool = false
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -70,6 +71,17 @@ struct ContentView: View {
                 RenameBranchModal(repo: repo, viewModel: viewModel)
             }
         }
+        .overlay {
+            if viewModel.isLoading {
+                ZStack {
+                    Color(.gray).opacity(0.3)
+                    AQILoaderView()
+                }
+            }
+        }
+        .onChange(of: viewModel.isLoading, { oldValue, newValue in
+            
+        })
         .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes
@@ -82,6 +94,3 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView(viewModel: ViewModel())
-}

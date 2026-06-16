@@ -34,6 +34,7 @@ class ViewModel {
     var currentBranch: String = ""
     var changedFiles: [ChangedFile] = []
     var commits: [Commit] = []
+    var stashes: [GitStash] = []
     var localBranches: [String] = []
     var remoteBranches: [String] = []
     
@@ -115,12 +116,16 @@ class ViewModel {
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
             let isCherryPickInProgress = FileManager.default.fileExists(atPath: cherryPickPath)
             
+            // 6. Stashes
+            let stashes = try await service.showStashList(at: path)
+            
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
             self.currentBranch = detectedCurrentBranch
             self.changedFiles = files
             self.commits = commitHistory
             self.isCherryPicking = isCherryPickInProgress
+            self.stashes = stashes
             
             // Update active branch name in RepoStore so it persists
             if let index = store.repos.firstIndex(where: { $0.id == repo.id }) {
@@ -323,6 +328,36 @@ class ViewModel {
         }
             await loadRepositoryData(for: repo)
             return result
+    }
+    
+    func showStash(at repo: Repo) async throws -> [GitStash] {
+        try await service.showStashList(at: repo.path)
+    }
+    
+    func stash(at repo: Repo) async throws -> GitResult {
+        try await service.stash(at: repo.path)
+    }
+    
+    func applyStash(at repo: Repo) async throws -> GitResult {
+        let result = try await service.applyStash(at: repo.path)
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
+    }
+    
+    func popStash(at repo: Repo) async throws -> GitResult {
+        let result = try await service.popStash(at: repo.path)
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
+    }
+    
+    func dropStash(at repo: Repo) async throws -> GitResult {
+        try await service.dropStash(at: repo.path)
     }
     
     @discardableResult

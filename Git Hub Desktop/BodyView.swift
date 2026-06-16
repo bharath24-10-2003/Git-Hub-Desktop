@@ -23,6 +23,8 @@ struct BodyView: View {
                     HistoryView(repo: repo, viewModel: viewModel)
                 case .branches:
                     BranchesView(repo: repo, viewModel: viewModel)
+                case .stashes:
+                    StashesView(repo: repo, viewModel: viewModel)
                 }
             } else {
                 VStack(spacing: 20) {

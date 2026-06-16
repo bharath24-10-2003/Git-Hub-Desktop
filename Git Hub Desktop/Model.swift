@@ -60,6 +60,7 @@ enum RepoSection: String, CaseIterable, Identifiable {
     case changes
     case history
     case branches
+    case stashes
     
     var id: String { rawValue }
     
@@ -71,6 +72,8 @@ enum RepoSection: String, CaseIterable, Identifiable {
             return "History"
         case .branches:
             return "Branches"
+        case .stashes:
+            return "Stashes"
         }
     }
     
@@ -82,6 +85,8 @@ enum RepoSection: String, CaseIterable, Identifiable {
             return "clock.arrow.circlepath"
         case .branches:
             return "point.topleft.down.curvedto.point.bottomright.up"
+        case .stashes:
+            return "archivebox"
         }
     }
 }
@@ -165,6 +170,12 @@ extension Commit {
     ]
 }
 
+struct GitStash: Identifiable {
+    let id: String
+    let type: String
+    let branch: String
+    let message: String
+}
 struct ChangedFile: Identifiable, Hashable {
     var id: String { path }
     let path: String
