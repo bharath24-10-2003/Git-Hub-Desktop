@@ -18,7 +18,7 @@ struct HistoryView: View {
     var body: some View {
         VStack {
             HStack {
-                TitleView(title: "History", desc: "All commits in \(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch) branch")
+                TitleView(title: "History", desc: "All commits in \(viewModel.historyBranch ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)) branch")
                 BaseButton(title: "Cherry pick") {
                     showCherryPickModal = true
                 }

@@ -10,7 +10,7 @@ import SwiftUI
 struct BodyView: View {
     
     let repo: Repo?
-    let section: RepoSection
+    @Binding var section: RepoSection
     let viewModel: ViewModel
     
     var body: some View {
@@ -22,7 +22,7 @@ struct BodyView: View {
                 case .history:
                     HistoryView(repo: repo, viewModel: viewModel)
                 case .branches:
-                    BranchesView(repo: repo, viewModel: viewModel)
+                    BranchesView(repo: repo, viewModel: viewModel, selectedSection: $section)
                 case .stashes:
                     StashesView(repo: repo, viewModel: viewModel)
                 }

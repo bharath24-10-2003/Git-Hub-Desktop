@@ -42,6 +42,7 @@ class ViewModel {
     var isLoading: Bool = false
     var isCherryPicking: Bool = false
     var errorMessage: String? = nil
+    var historyBranch: String? = nil
     
     // MARK: - Presentation Flags
     var showCloneModal: Bool = false
@@ -110,7 +111,8 @@ class ViewModel {
             let files = try await service.status(at: path)
             
             // 4. Log history
-            let commitHistory = try await service.log(at: path)
+            let branchForLog = self.historyBranch ?? detectedCurrentBranch
+            let commitHistory = try await service.log(branch: branchForLog, at: path)
             
             // 5. Check if cherry-pick is in progress
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path

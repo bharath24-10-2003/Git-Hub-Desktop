@@ -39,7 +39,7 @@ struct ContentView: View {
 
                 BodyView(
                     repo: viewModel.selectedRepo,
-                    section: selectedSection,
+                    section: $selectedSection,
                     viewModel: viewModel
                 )
             }
@@ -81,6 +81,7 @@ struct ContentView: View {
         }
         .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {
+            viewModel.historyBranch = nil
             selectedSection = .changes
         }
         .task {

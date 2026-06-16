@@ -11,6 +11,7 @@ struct BranchesView: View {
     
     let repo: Repo
     let viewModel: ViewModel
+    @Binding var selectedSection: RepoSection
     
     @State var searchLocalBranch: String = ""
     @State var searchRemoteBranch: String = ""
@@ -113,7 +114,11 @@ struct BranchesView: View {
                                         }
                                     }
                                     Button {
-                                        
+                                        viewModel.historyBranch = branch
+                                        Task {
+                                            await viewModel.loadRepositoryData(for: repo)
+                                            selectedSection = .history
+                                        }
                                     } label: {
                                         HStack {
                                             Image(systemName: "clock.arrow.circlepath")
@@ -175,15 +180,37 @@ struct BranchesView: View {
                                     selectedBranch = branch
                                 }
                                 .contextMenu {
-                                    Button("Rename") {
+                                    Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = true
                                         viewModel.showRenameBranchModal = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "pencil.line")
+                                            Text("Rename")
+                                        }
                                     }
-                                    Button("Delete") {
+                                    Button {
+                                        viewModel.historyBranch = branch
+                                        Task {
+                                            await viewModel.loadRepositoryData(for: repo)
+                                            selectedSection = .history
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "clock.arrow.circlepath")
+                                            Text("See History")
+                                        }
+                                    }
+                                    Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = true
                                         viewModel.showDeleteBranchModal = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "trash")
+                                            Text("Delete")
+                                        }
                                     }
                                 } preview: {
                                     VStack(alignment: .leading, spacing: 10) {

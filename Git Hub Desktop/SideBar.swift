@@ -97,6 +97,14 @@ struct Sidebar: View {
                     
                     Button {
                         selectedSection = section
+                        if section == .history {
+                            viewModel.historyBranch = nil
+                            if let repo = viewModel.selectedRepo {
+                                Task {
+                                    await viewModel.loadRepositoryData(for: repo)
+                                }
+                            }
+                        }
                     } label: {
                         
                         HStack {

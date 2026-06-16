@@ -157,12 +157,16 @@ nonisolated extension GitService {
         }
     }
     // Log
-    func log(at repo: String) async throws -> [Commit] {
-        let result = try await run([
+    func log(branch: String? = nil, at repo: String) async throws -> [Commit] {
+        var args = [
             "log",
             "--pretty=format:%H|%h|%an <%ae>|%ad|%s",
             "--date=format:%a %b %d %H:%M:%S %Y %z"
-        ], at: repo)
+        ]
+        if let branch = branch {
+            args.append(branch)
+        }
+        let result = try await run(args, at: repo)
         return parseLog(result.output)
     }
     
