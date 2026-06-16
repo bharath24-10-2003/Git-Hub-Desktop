@@ -15,6 +15,8 @@ struct ChangesView: View {
     @State private var commitMessage: String = ""
     @State private var selectedFiles = Set<String>()
     @State private var error: String?
+    @State private var stashMessage: String?
+    @State private var isStashPresented: Bool = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -44,6 +46,11 @@ struct ChangesView: View {
                     modifiedSection
                 }
             }
+        }
+        .sheet(isPresented: $isStashPresented) {
+            stashModal(viewModel: viewModel, repo: repo, onDismiss: {
+                isStashPresented = false
+            })
         }
     }
     
@@ -140,17 +147,7 @@ struct ChangesView: View {
                         .font(.headline)
                     Spacer()
                     SmallButton(title: "Stash") {
-                        self.error = nil
-                        Task {
-                            do {
-                                let result = try await viewModel.stash(at: repo)
-                                if result.isSuccess {
-                                    self.error = result.error
-                                }
-                            } catch {
-                                self.error = error.localizedDescription
-                            }
-                        }
+                        isStashPresented = true
                     }
                     SmallButton(title: "Stage All") {
                         self.error = nil

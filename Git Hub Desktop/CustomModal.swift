@@ -71,12 +71,8 @@ struct CloneModal: View {
                         guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         self.error = nil
                         Task {
-                            do {
-                                _ = try await viewModel.cloneRepo(url: url, destinationPath: path)
-                                viewModel.showCloneModal = false
-                            } catch {
-                                self.error = error.localizedDescription
-                            }
+                            await viewModel.cloneRepo(url: url, destinationPath: path)
+                            viewModel.showCloneModal = false
                         }
                     }
                 }
@@ -85,6 +81,54 @@ struct CloneModal: View {
         }
         .frame(width: 500)
         .padding()
+    }
+}
+
+struct stashModal: View {
+    
+    let viewModel: ViewModel
+    let repo: Repo
+    
+    @State private var error: String?
+    @State private var stashMessage: String = ""
+    
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            
+            ModalDescription(title: "Stash", description: "Enter Stash message")
+            
+            Divider()
+                .padding(.horizontal, -16)
+                .padding(.vertical)
+            
+            CustomTextField(url: $stashMessage)
+            
+            HStack {
+                
+                if let error {
+                    ErrorBannerView(message: error)
+                }
+                
+                BaseButton(title: "Cancel") {
+                    onDismiss()
+                }
+                
+                BaseButton(title: "Enter Stash Message") {
+                    Task {
+                        do {
+                            let result = try await viewModel.stash(at: repo)
+                            if !result.isSuccess {
+                                self.error = result.error
+                            }
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

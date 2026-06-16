@@ -79,9 +79,6 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: viewModel.isLoading, { oldValue, newValue in
-            
-        })
         .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {
             selectedSection = .changes
