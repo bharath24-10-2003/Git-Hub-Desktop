@@ -378,10 +378,20 @@ class ViewModel {
     func revertCommit(_ hash: String, at repo: Repo) async throws -> GitResult {
         let result = try await service.revert(commit: hash, at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
-        }
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
             await loadRepositoryData(for: repo)
             return result
+    }
+    
+    @discardableResult
+    func resetCommit(_ hash: String, hard: Bool = false, at repo: Repo) async throws -> GitResult {
+        let result = try await service.reset(commit: hash, hard: hard, at: repo.path)
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult

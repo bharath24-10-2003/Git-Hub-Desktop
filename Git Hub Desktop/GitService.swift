@@ -436,11 +436,20 @@ nonisolated extension GitService {
         return commits
     }
     
-    // MARK: - Revert
+    // MARK: - Revert & Reset
     
     @discardableResult
     func revert(commit: String, at repo: String) async throws -> GitResult {
         try await run(["revert", "--no-edit", commit], at: repo)
+    }
+    
+    @discardableResult
+    func reset(commit: String, hard: Bool = false, at repo: String) async throws -> GitResult {
+        if hard {
+            return try await run(["reset", "--hard", commit], at: repo)
+        } else {
+            return try await run(["reset", "--soft", commit], at: repo)
+        }
     }
     
     // MARK: - Discard and Unstage

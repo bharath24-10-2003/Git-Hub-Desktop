@@ -91,6 +91,8 @@ struct HistoryCommitView: View {
     let repo: Repo
     let viewModel: ViewModel
     @State private var revertError: String?
+    @State private var resetError: String?
+    @State private var showResetModal: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -124,11 +126,22 @@ struct HistoryCommitView: View {
                 if !commit.isPushed {
                     Image(systemName: "icloud.slash.fill")
                 }
+                if isCurrentBranch {
+                    Button {
+                        self.showResetModal = true
+                    } label: {
+                        Text("Reset")
+                            .padding(3)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .buttonStyle(.glass)
+                }
+                
                 Button {
                     self.revertError = nil
                     Task {
                         do {
-                            _ = try await viewModel.revertCommit(commit.id, at: repo)
+                            try await viewModel.revertCommit(commit.id, at: repo)
                         } catch {
                             self.revertError = error.localizedDescription
                         }
@@ -150,11 +163,70 @@ struct HistoryCommitView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 4)
             }
+            if let resetError {
+                ErrorBannerView(message: resetError) {
+                    self.resetError = nil
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+            }
         }
         .overlay {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.gray, lineWidth: 1)
                 .opacity(0.2)
+        }
+        .sheet(isPresented: $showResetModal) {
+            resetModal
+        }
+    }
+    
+    private var isCurrentBranch: Bool {
+        return (viewModel.historyBranch == nil) || (viewModel.historyBranch == viewModel.currentBranch)
+    }
+    
+    private var resetModal: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ModalDescription(title: "Reset Commit", description: "Choose how you want to reset to commit \(commit.shortHash)")
+                .padding()
+            
+            Divider()
+            
+            HStack {
+                BaseButton(title: "Soft Reset") {
+                    self.resetError = nil
+                    Task {
+                        do {
+                            try await viewModel.resetCommit(commit.id, hard: false, at: repo)
+                            showResetModal = false
+                        } catch {
+                            self.resetError = error.localizedDescription
+                            showResetModal = false
+                        }
+                    }
+                }
+                .padding(.trailing, 24)
+                
+                BaseButton(title: "Hard Reset") {
+                    self.resetError = nil
+                    Task {
+                        do {
+                            try await viewModel.resetCommit(commit.id, hard: true, at: repo)
+                            showResetModal = false
+                        } catch {
+                            self.resetError = error.localizedDescription
+                            showResetModal = false
+                        }
+                    }
+                }
+                .padding(.trailing, 24)
+                
+                BaseButton(title: "Cancel") {
+                    showResetModal = false
+                    resetError = nil
+                }
+            }
+            .padding()
         }
     }
     
