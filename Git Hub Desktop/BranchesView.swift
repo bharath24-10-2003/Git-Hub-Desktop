@@ -102,15 +102,33 @@ struct BranchesView: View {
                                     selectedBranch = branch
                                 }
                                 .contextMenu {
-                                    Button("Rename") {
+                                    Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = false
                                         viewModel.showRenameBranchModal = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "pencil.line")
+                                            Text("Rename")
+                                        }
                                     }
-                                    Button("Delete") {
+                                    Button {
+                                        
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "clock.arrow.circlepath")
+                                            Text("See History")
+                                        }
+                                    }
+                                    Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = false
                                         viewModel.showDeleteBranchModal = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "trash")
+                                            Text("Delete")
+                                        }
                                     }
                                 } preview: {
                                     VStack(alignment: .leading, spacing: 10) {
