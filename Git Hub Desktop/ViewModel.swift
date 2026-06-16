@@ -336,8 +336,8 @@ class ViewModel {
         return result
     }
     
-    func stash(at repo: Repo) async throws -> GitResult {
-        let result = try await service.stash(at: repo.path)
+    func stash(at repo: Repo, message: String? = nil) async throws -> GitResult {
+        let result = try await service.stash(at: repo.path, message: message)
         await loadRepositoryData(for: repo)
         return result
     }

@@ -126,7 +126,7 @@ struct stashModal: View {
                 ProminentBaseButton(title: "Stash") {
                     Task {
                         do {
-                            let result = try await viewModel.stash(at: repo)
+                            let result = try await viewModel.stash(at: repo, message: stashMessage.isEmpty ? nil : stashMessage)
                             if !result.isSuccess {
                                 self.error = result.error
                             }
