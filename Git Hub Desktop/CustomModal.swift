@@ -98,14 +98,22 @@ struct stashModal: View {
         VStack(alignment: .leading, spacing: 0) {
             
             ModalDescription(title: "Stash", description: "Enter Stash message")
+                .padding(.leading)
             
             Divider()
                 .padding(.horizontal, -16)
                 .padding(.vertical)
             
-            CustomTextField(url: $stashMessage)
+            CustomTextField(url: $stashMessage,imageName: "archivebox", placeholder: "Enter Stash message")
+                .padding()
+            
+            Divider()
+                .padding(.horizontal, -16)
+                .padding(.vertical)
             
             HStack {
+                
+                Spacer()
                 
                 if let error {
                     ErrorBannerView(message: error)
@@ -115,7 +123,7 @@ struct stashModal: View {
                     onDismiss()
                 }
                 
-                BaseButton(title: "Enter Stash Message") {
+                ProminentBaseButton(title: "Stash") {
                     Task {
                         do {
                             let result = try await viewModel.stash(at: repo)

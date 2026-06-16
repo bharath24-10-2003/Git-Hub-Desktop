@@ -51,6 +51,7 @@ struct ChangesView: View {
             stashModal(viewModel: viewModel, repo: repo, onDismiss: {
                 isStashPresented = false
             })
+            .padding()
         }
     }
     

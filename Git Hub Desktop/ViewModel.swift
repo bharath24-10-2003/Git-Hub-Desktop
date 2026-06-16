@@ -331,11 +331,15 @@ class ViewModel {
     }
     
     func showStash(at repo: Repo) async throws -> [GitStash] {
-        try await service.showStashList(at: repo.path)
+        let result = try await service.showStashList(at: repo.path)
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     func stash(at repo: Repo) async throws -> GitResult {
-        try await service.stash(at: repo.path)
+        let result = try await service.stash(at: repo.path)
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     func applyStash(at repo: Repo) async throws -> GitResult {
@@ -357,7 +361,9 @@ class ViewModel {
     }
     
     func dropStash(at repo: Repo) async throws -> GitResult {
-        try await service.dropStash(at: repo.path)
+        let result = try await service.dropStash(at: repo.path)
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
