@@ -170,6 +170,16 @@ nonisolated extension GitService {
         return parseLog(result.output)
     }
     
+    // Get unpushed commits
+    func getUnpushedCommits(branch: String, at repo: String) async -> Set<String> {
+        let result = try? await run(["log", branch, "--not", "--remotes", "--format=%H"], at: repo)
+        guard let output = result?.output, result?.isSuccess == true else {
+            return []
+        }
+        let hashes = output.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        return Set(hashes)
+    }
+    
     @discardableResult
     func fetch(at repo:String) async throws -> GitResult {
         try await run(["fetch"], at: repo)

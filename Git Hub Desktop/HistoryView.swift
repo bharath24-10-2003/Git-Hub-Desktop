@@ -121,6 +121,9 @@ struct HistoryCommitView: View {
                     }
                 }
                 Spacer()
+                if !commit.isPushed {
+                    Image(systemName: "icloud.slash.fill")
+                }
                 Button {
                     self.revertError = nil
                     Task {

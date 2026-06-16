@@ -102,6 +102,7 @@ struct Commit: Identifiable,Hashable {
     let author: String
     let date: String
     let message: String
+    var isPushed: Bool = true
     
     private var parsedDate: Date? {
         let formatter = DateFormatter()

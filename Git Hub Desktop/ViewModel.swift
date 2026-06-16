@@ -112,7 +112,13 @@ class ViewModel {
             
             // 4. Log history
             let branchForLog = self.historyBranch ?? detectedCurrentBranch
-            let commitHistory = try await service.log(branch: branchForLog, at: path)
+            var commitHistory = try await service.log(branch: branchForLog, at: path)
+            let unpushedCommits = await service.getUnpushedCommits(branch: branchForLog, at: path)
+            for i in 0..<commitHistory.count {
+                if unpushedCommits.contains(commitHistory[i].id) {
+                    commitHistory[i].isPushed = false
+                }
+            }
             
             // 5. Check if cherry-pick is in progress
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
