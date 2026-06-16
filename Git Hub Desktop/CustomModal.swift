@@ -129,6 +129,8 @@ struct stashModal: View {
                             let result = try await viewModel.stash(at: repo, message: stashMessage.isEmpty ? nil : stashMessage)
                             if !result.isSuccess {
                                 self.error = result.error
+                            } else {
+                                onDismiss()
                             }
                         } catch {
                             self.error = error.localizedDescription
