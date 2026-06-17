@@ -25,50 +25,53 @@ struct StashesView: View {
                 }
                 .padding(.horizontal)
             }
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    ForEach(viewModel.stashes) { stash in
-                        SingleStashView(stash: stash, applyStash: {
-                            Task {
-                                do {
-                                    let result = try await viewModel.applyStash(at: repo)
-                                    if !result.isSuccess {
-                                        self.error = result.error
+            if !viewModel.stashes.isEmpty {
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(viewModel.stashes) { stash in
+                            SingleStashView(stash: stash, applyStash: {
+                                Task {
+                                    do {
+                                        let result = try await viewModel.applyStash(at: repo)
+                                        if !result.isSuccess {
+                                            self.error = result.error
+                                        }
+                                    } catch {
+                                        self.error = error.localizedDescription
                                     }
-                                } catch {
-                                    self.error = error.localizedDescription
                                 }
-                            }
-                        }, popStash: {
-                            Task {
-                                do {
-                                    let result = try await viewModel.popStash(at: repo)
-                                    if !result.isSuccess {
-                                        self.error = result.error
+                            }, popStash: {
+                                Task {
+                                    do {
+                                        let result = try await viewModel.popStash(at: repo)
+                                        if !result.isSuccess {
+                                            self.error = result.error
+                                        }
+                                    } catch {
+                                        self.error = error.localizedDescription
                                     }
-                                } catch {
-                                    self.error = error.localizedDescription
                                 }
-                            }
-                        }, deleteStash: {
-                            Task {
-                                do {
-                                    let result = try await viewModel.dropStash(at: repo)
-                                    if !result.isSuccess {
-                                        self.error = result.error
+                            }, deleteStash: {
+                                Task {
+                                    do {
+                                        let result = try await viewModel.dropStash(at: repo)
+                                        if !result.isSuccess {
+                                            self.error = result.error
+                                        }
+                                    } catch {
+                                        self.error = error.localizedDescription
                                     }
-                                } catch {
-                                    self.error = error.localizedDescription
                                 }
-                            }
-                        })
+                            })
                             .padding(-10)
+                        }
+                        .padding()
                     }
-                    .padding()
                 }
+                .padding(.bottom, 14)
+            } else {
+                NoStashView()
             }
-            .padding(.bottom, 14)
         }
     }
 }
@@ -170,6 +173,23 @@ struct SingleStashView: View {
         stash.id
             .replacingOccurrences(of: "stash@{", with: "")
             .replacingOccurrences(of: "}", with: "")
+    }
+}
+
+struct NoStashView : View {
+    var body: some View {
+    
+        VStack {
+            Image(systemName: "xmark.bin")
+                .font(.system(size: 40))
+                .foregroundColor(.secondary)
+                .padding(.bottom, 8)
+            Text("No stashes found in this Repository")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        
     }
 }
 

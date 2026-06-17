@@ -268,16 +268,15 @@ struct NoChangesView : View {
     var body: some View {
     
         VStack {
+            Image(systemName: "book.pages")
+                .font(.system(size: 40))
+                .foregroundColor(.secondary)
+                .padding(.bottom, 8)
             Text("No changes done yet for commit")
-                .font(Font.system(size: 50, weight: .bold))
+                .font(.headline)
                 .foregroundColor(.secondary)
         }
-        .padding(30)
-        .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke()
-                .opacity(0.2)
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         
     }
 }

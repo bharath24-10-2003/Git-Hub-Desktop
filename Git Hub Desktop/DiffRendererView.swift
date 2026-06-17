@@ -4,10 +4,17 @@
 //
 
 import SwiftUI
+import Highlighter
 
 struct DiffRendererView: View {
     let diff: FileDiff
     let file: ChangedFile
+    
+    var language: String {
+        let path = file.path as NSString
+        let ext = path.pathExtension.lowercased()
+        return ext.isEmpty ? "plaintext" : ext
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -41,7 +48,7 @@ struct DiffRendererView: View {
             ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(diff.lines) { line in
-                        DiffLineView(line: line)
+                        DiffLineView(line: line, language: language)
                     }
                 }
                 .padding(.vertical, 8)
@@ -56,8 +63,23 @@ struct DiffRendererView: View {
     }
 }
 
+class SyntaxHighlighter {
+    static let shared = SyntaxHighlighter()
+    let highlighter: Highlighter?
+    
+    private init() {
+        self.highlighter = Highlighter()
+    }
+}
+
 struct DiffLineView: View {
     let line: DiffLine
+    let language: String
+    
+    @Environment(\.colorScheme) var colorScheme
+    
+    // Asynchronous highlighting state
+    @State private var highlightedString: AttributedString?
     
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -77,14 +99,62 @@ struct DiffLineView: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
             
             // Code
-            Text(line.text)
-                .font(.system(size: 13, design: .monospaced))
-                .padding(.leading, 8)
-                .padding(.vertical, 1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(backgroundColor(for: line.type))
-                .foregroundColor(textColor(for: line.type))
+            Group {
+                if let attrStr = highlightedString {
+                    Text(attrStr)
+                } else {
+                    Text(line.text)
+                        .foregroundColor(textColor(for: line.type))
+                }
+            }
+            .font(.system(size: 13, design: .monospaced))
+            .textSelection(.enabled)
+            .padding(.leading, 8)
+            .padding(.vertical, 1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(backgroundColor(for: line.type))
         }
+        .task(id: line.id) {
+            await highlightText()
+        }
+    }
+    
+    private func highlightText() async {
+        guard line.type == .added || line.type == .removed || line.type == .context else {
+            return
+        }
+        
+        let rawText = line.text
+        if rawText.isEmpty { return }
+        
+        // Strip the first character (+, -, or space) for highlighting
+        let firstChar = rawText.first!
+        let codeToHighlight = String(rawText.dropFirst())
+        
+        // Pick a theme based on color scheme
+        let theme = colorScheme == .dark ? "atom-one-dark" : "xcode"
+        
+        if let highlighter = SyntaxHighlighter.shared.highlighter {
+            _ = highlighter.setTheme(theme)
+            if let result = highlighter.highlight(codeToHighlight, as: language) {
+                var finalString = AttributedString(String(firstChar))
+                
+                var highlighted = AttributedString(result)
+                // Adjust font size since highlighter might set its own
+                highlighted.font = .system(size: 13, design: .monospaced)
+                
+                // Append the highlighted code to the prefix
+                finalString.append(highlighted)
+                
+                self.highlightedString = finalString
+                return
+            }
+        }
+        
+        // Fallback
+        var fallbackStr = AttributedString(rawText)
+        fallbackStr.font = .system(size: 13, design: .monospaced)
+        self.highlightedString = fallbackStr
     }
     
     private func backgroundColor(for type: DiffLineType) -> Color {
@@ -108,13 +178,13 @@ struct DiffLineView: View {
 
 #Preview {
     VStack(spacing: 0) {
-        DiffLineView(line: DiffLine(text: "@@ -1,3 +1,4 @@", type: .hunkHeader, oldLineNumber: nil, newLineNumber: nil))
-        DiffLineView(line: DiffLine(text: " struct DiffLineView: View {", type: .context, oldLineNumber: 1, newLineNumber: 1))
-        DiffLineView(line: DiffLine(text: "     let line: DiffLine", type: .context, oldLineNumber: 2, newLineNumber: 2))
-        DiffLineView(line: DiffLine(text: "-    var body: some View {", type: .removed, oldLineNumber: 3, newLineNumber: nil))
-        DiffLineView(line: DiffLine(text: "+    var body: some View {", type: .added, oldLineNumber: nil, newLineNumber: 3))
-        DiffLineView(line: DiffLine(text: "+        // Added line here", type: .added, oldLineNumber: nil, newLineNumber: 4))
-        DiffLineView(line: DiffLine(text: "         HStack(alignment: .top, spacing: 0) {", type: .context, oldLineNumber: 4, newLineNumber: 5))
+        DiffLineView(line: DiffLine(text: "@@ -1,3 +1,4 @@", type: .hunkHeader, oldLineNumber: nil, newLineNumber: nil), language: "swift")
+        DiffLineView(line: DiffLine(text: " struct DiffLineView: View {", type: .context, oldLineNumber: 1, newLineNumber: 1), language: "swift")
+        DiffLineView(line: DiffLine(text: "     let line: DiffLine", type: .context, oldLineNumber: 2, newLineNumber: 2), language: "swift")
+        DiffLineView(line: DiffLine(text: "-    var body: some View {", type: .removed, oldLineNumber: 3, newLineNumber: nil), language: "swift")
+        DiffLineView(line: DiffLine(text: "+    var body: some View {", type: .added, oldLineNumber: nil, newLineNumber: 3), language: "swift")
+        DiffLineView(line: DiffLine(text: "+        // Added line here", type: .added, oldLineNumber: nil, newLineNumber: 4), language: "swift")
+        DiffLineView(line: DiffLine(text: "         HStack(alignment: .top, spacing: 0) {", type: .context, oldLineNumber: 4, newLineNumber: 5), language: "swift")
     }
     .padding()
 }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8EA253F02FE2541D00EBFF7F /* Highlighter in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA253EF2FE2541D00EBFF7F /* Highlighter */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		8E8180602F9D33CE002BB503 /* Git Hub Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Git Hub Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8EA253F02FE2541D00EBFF7F /* Highlighter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = "Git Hub Desktop";
 			packageProductDependencies = (
+				8EA253EF2FE2541D00EBFF7F /* Highlighter */,
 			);
 			productName = "Git Hub Desktop";
 			productReference = 8E8180602F9D33CE002BB503 /* Git Hub Desktop.app */;
@@ -95,6 +101,7 @@
 			mainGroup = 8E8180572F9D33CE002BB503;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				8EA253EE2FE2541D00EBFF7F /* XCRemoteSwiftPackageReference "HighlighterSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8E8180612F9D33CE002BB503 /* Products */;
@@ -335,6 +342,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8EA253EE2FE2541D00EBFF7F /* XCRemoteSwiftPackageReference "HighlighterSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/smittytone/HighlighterSwift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 3.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8EA253EF2FE2541D00EBFF7F /* Highlighter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8EA253EE2FE2541D00EBFF7F /* XCRemoteSwiftPackageReference "HighlighterSwift" */;
+			productName = Highlighter;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8E8180582F9D33CE002BB503 /* Project object */;
 }
