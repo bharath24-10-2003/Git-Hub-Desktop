@@ -365,7 +365,7 @@ struct ChangedFileRowView: View {
                 .foregroundStyle(statusColor(for: file.status))
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(file.path)
+                Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
                     .font(.system(size: 13, weight: .medium))
                 Text(file.status + (file.isStaged ? " (Staged)" : " (Unstaged)"))
                     .font(.caption)

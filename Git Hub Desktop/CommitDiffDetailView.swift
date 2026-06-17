@@ -73,7 +73,6 @@ struct CommitDiffDetailView: View {
                         .transition(.move(edge: .trailing))
                     }
                 }
-                .animation(.easeInOut(duration: 0.3), value: selectedFileForDiff != nil)
             }
         }
         .navigationTitle(title)
@@ -122,7 +121,6 @@ struct CommitFileRowView: View {
             Text(file.path.split(separator: "/").last ?? "")
                 .lineLimit(1)
                 .truncationMode(.middle)
-            Spacer()
             Text(file.status)
                 .font(.caption2)
                 .bold()
@@ -131,6 +129,7 @@ struct CommitFileRowView: View {
                 .background(statusColor.opacity(0.2))
                 .foregroundColor(statusColor)
                 .clipShape(Capsule())
+            Spacer()
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
