@@ -180,6 +180,75 @@ nonisolated extension GitService {
         return Set(hashes)
     }
     
+    // Diff
+    func getDiff(for file: String, isStaged: Bool, at repo: String) async throws -> FileDiff {
+        var args = ["diff"]
+        if isStaged {
+            args.append("--cached")
+        }
+        args.append(file)
+        let result = try await run(args, at: repo)
+        
+        // If there's an error and no output, throw it
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        
+        return parseDiff(result.output)
+    }
+    
+    private func parseDiff(_ output: String) -> FileDiff {
+        let lines = output.components(separatedBy: .newlines)
+        var diffLines: [DiffLine] = []
+        var oldLine: Int? = nil
+        var newLine: Int? = nil
+        var isNewFile = false
+        var isDeletedFile = false
+        
+        for line in lines {
+            if line.hasPrefix("diff --git") {
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("new file mode") {
+                isNewFile = true
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("deleted file mode") {
+                isDeletedFile = true
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("index") || line.hasPrefix("---") || line.hasPrefix("+++") {
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("@@") {
+                // Parse hunk header
+                // @@ -oldStart,oldLines +newStart,newLines @@
+                diffLines.append(DiffLine(text: line, type: .hunkHeader, oldLineNumber: nil, newLineNumber: nil))
+                
+                // Extract line numbers using regex
+                if let regex = try? NSRegularExpression(pattern: #"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@"#),
+                   let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
+                    if let oldRange = Range(match.range(at: 1), in: line), let oldStart = Int(line[oldRange]) {
+                        oldLine = oldStart
+                    }
+                    if let newRange = Range(match.range(at: 2), in: line), let newStart = Int(line[newRange]) {
+                        newLine = newStart
+                    }
+                }
+            } else if line.hasPrefix("+") {
+                diffLines.append(DiffLine(text: String(line.dropFirst()), type: .added, oldLineNumber: nil, newLineNumber: newLine))
+                if newLine != nil { newLine! += 1 }
+            } else if line.hasPrefix("-") {
+                diffLines.append(DiffLine(text: String(line.dropFirst()), type: .removed, oldLineNumber: oldLine, newLineNumber: nil))
+                if oldLine != nil { oldLine! += 1 }
+            } else if line.hasPrefix(" ") {
+                diffLines.append(DiffLine(text: String(line.dropFirst()), type: .context, oldLineNumber: oldLine, newLineNumber: newLine))
+                if oldLine != nil { oldLine! += 1 }
+                if newLine != nil { newLine! += 1 }
+            } else if line.hasPrefix("\\ No newline at end of file") {
+                diffLines.append(DiffLine(text: line, type: .context, oldLineNumber: nil, newLineNumber: nil))
+            }
+        }
+        
+        return FileDiff(lines: diffLines, isNewFile: isNewFile, isDeletedFile: isDeletedFile)
+    }
+    
     @discardableResult
     func fetch(at repo:String) async throws -> GitResult {
         try await run(["fetch"], at: repo)

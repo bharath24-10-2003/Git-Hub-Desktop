@@ -186,81 +186,61 @@ struct ChangesView: View {
                 .padding()
                 
                 Divider()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(viewModel.changedFiles) { file in
-                            let isSelected = selectedFiles.contains(file.path)
-                            
-                            HStack(spacing: 12) {
+                HStack(spacing: 0) {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(viewModel.changedFiles) { file in
+                                ChangedFileRowView(
+                                    file: file,
+                                    repo: repo,
+                                    viewModel: viewModel,
+                                    isSelected: selectedFiles.contains(file.path),
+                                    isViewingDiff: viewModel.selectedFileForDiff?.id == file.id,
+                                    error: $error,
+                                    toggleSelection: {
+                                        if selectedFiles.contains(file.path) {
+                                            selectedFiles.remove(file.path)
+                                        } else {
+                                            selectedFiles.insert(file.path)
+                                        }
+                                    }
+                                )
                                 
-                                Image(systemName: "doc.text")
-                                    .foregroundStyle(statusColor(for: file.status))
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(file.path)
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text(file.status + (file.isStaged ? " (Staged)" : " (Unstaged)"))
-                                        .font(.caption)
-                                        .foregroundStyle(statusColor(for: file.status).opacity(0.8))
+                                if file.path != viewModel.changedFiles.last?.path {
+                                    Divider()
                                 }
-                                Spacer()
-                                if file.isStaged {
-                                    SmallButton(title: "Unstage") {
-                                        Task {
-                                            do {
-                                                _ = try await viewModel.unstage(file: file.path, at: repo)
-                                            } catch {
-                                                self.error = error.localizedDescription
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    SmallButton(title: "Stage", tint: .blue) {
-                                        Task {
-                                            do {
-                                                _ = try await viewModel.stage(file: file.path, at: repo)
-                                            } catch {
-                                                self.error = error.localizedDescription
-                                            }
-                                        }
-                                    }
-                                }
-                                SmallButton(title: "Discard", tint: .red) {
-                                    Task {
-                                        do {
-                                            _ = try await viewModel.discardChange(for: file, at: repo)
-                                        } catch {
-                                            self.error = error.localizedDescription
-                                        }
-                                    }
-                                }
-                                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(isSelected ? .blue : .secondary)
-                                    .font(Font.system(size: 16))
-                            }
-                            .padding()
-                            .contentShape(RoundedRectangle(cornerRadius: 10))
-                            .onTapGesture {
-                                if isSelected {
-                                    selectedFiles.remove(file.path)
-                                } else {
-                                    selectedFiles.insert(file.path)
-                                }
-                            }
-                            .overlay {
-                                if isSelected {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .opacity(0.1)
-                                }
-                            }
-                            
-                            if file.path != viewModel.changedFiles.last?.path {
-                                Divider()
                             }
                         }
                     }
+                    
+                    Divider()
+                    
+                    // Right: Diff View
+                    VStack {
+                        if let selectedFile = viewModel.selectedFileForDiff {
+                            if let diff = viewModel.currentDiff {
+                                DiffRendererView(diff: diff, file: selectedFile)
+                                    .padding()
+                            } else {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                        } else {
+                            VStack {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.secondary)
+                                    .padding(.bottom, 8)
+                                Text("Select a file to view its diff")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(NSColor.controlBackgroundColor))
                 }
-                .padding()
             }
         }
         .overlay {
@@ -372,3 +352,92 @@ struct TitleView: View {
         }
         .padding()
 }
+
+struct ChangedFileRowView: View {
+    let file: ChangedFile
+    let repo: Repo
+    let viewModel: ViewModel
+    let isSelected: Bool
+    let isViewingDiff: Bool
+    @Binding var error: String?
+    let toggleSelection: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "doc.text")
+                .foregroundStyle(statusColor(for: file.status))
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(file.path)
+                    .font(.system(size: 13, weight: .medium))
+                Text(file.status + (file.isStaged ? " (Staged)" : " (Unstaged)"))
+                    .font(.caption)
+                    .foregroundStyle(statusColor(for: file.status).opacity(0.8))
+            }
+            Spacer()
+            
+            if file.isStaged {
+                SmallButton(title: "Unstage") {
+                    Task {
+                        do {
+                            _ = try await viewModel.unstage(file: file.path, at: repo)
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                }
+            } else {
+                SmallButton(title: "Stage", tint: .blue) {
+                    Task {
+                        do {
+                            _ = try await viewModel.stage(file: file.path, at: repo)
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                }
+            }
+            
+            SmallButton(title: "Discard", tint: .red) {
+                Task {
+                    do {
+                        _ = try await viewModel.discardChange(for: file, at: repo)
+                    } catch {
+                        self.error = error.localizedDescription
+                    }
+                }
+            }
+            
+            Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                .foregroundStyle(isSelected ? .blue : .secondary)
+                .font(Font.system(size: 16))
+                .padding(4)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    toggleSelection()
+                }
+        }
+        .padding()
+        .contentShape(Rectangle())
+        .background(isViewingDiff ? Color.blue.opacity(0.1) : Color.clear)
+        .onTapGesture {
+            Task {
+                try? await viewModel.loadDiff(for: file, at: repo)
+            }
+        }
+    }
+    
+    private func statusColor(for status: String) -> Color {
+        switch status {
+        case "Untracked", "Added":
+            return .green
+        case "Deleted":
+            return .red
+        case "Renamed":
+            return .purple
+        default:
+            return .orange
+        }
+    }
+}
+

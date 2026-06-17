@@ -44,6 +44,10 @@ class ViewModel {
     var errorMessage: String? = nil
     var historyBranch: String? = nil
     
+    // MARK: - Diff State
+    var selectedFileForDiff: ChangedFile? = nil
+    var currentDiff: FileDiff? = nil
+    
     // MARK: - Presentation Flags
     var showCloneModal: Bool = false
     var showAddRepoModal: Bool = false
@@ -134,6 +138,21 @@ class ViewModel {
             self.commits = commitHistory
             self.isCherryPicking = isCherryPickInProgress
             self.stashes = stashes
+            self.stashes = stashes
+            
+            // Clear diff if selected file no longer exists
+            if let selected = self.selectedFileForDiff {
+                if let updatedFile = files.first(where: { $0.id == selected.id }) {
+                    self.selectedFileForDiff = updatedFile
+                    // Re-load diff if file still exists
+                    Task {
+                        try? await self.loadDiff(for: updatedFile, at: repo)
+                    }
+                } else {
+                    self.selectedFileForDiff = nil
+                    self.currentDiff = nil
+                }
+            }
             
             // Update active branch name in RepoStore so it persists
             if let index = store.repos.firstIndex(where: { $0.id == repo.id }) {
@@ -142,6 +161,21 @@ class ViewModel {
         } catch {
             self.errorMessage = error.localizedDescription
             print("Failed to load repo data:", error)
+        }
+    }
+    
+    // MARK: - Diff
+    
+    @MainActor
+    func loadDiff(for file: ChangedFile, at repo: Repo) async throws {
+        self.selectedFileForDiff = file
+        self.currentDiff = nil // clear while loading
+        
+        do {
+            let diff = try await service.getDiff(for: file.path, isStaged: file.isStaged, at: repo.path)
+            self.currentDiff = diff
+        } catch {
+            self.errorMessage = error.localizedDescription
         }
     }
     
