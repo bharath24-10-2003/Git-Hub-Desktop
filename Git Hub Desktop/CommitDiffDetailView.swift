@@ -166,9 +166,10 @@ struct CommitFileRowView: View {
     
     private var statusColor: Color {
         switch file.status {
-        case "A": return .green
-        case "M": return .blue
-        case "D": return .red
+        case "Added", "A": return .green
+        case "Modified", "M": return .blue
+        case "Deleted", "D": return .red
+        case "Renamed", "R": return .purple
         default: return .gray
         }
     }
