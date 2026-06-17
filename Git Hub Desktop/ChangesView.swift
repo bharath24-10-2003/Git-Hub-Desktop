@@ -120,11 +120,16 @@ struct ChangesView: View {
                     self.error = nil
                     Task {
                         do {
-                            _ = try await viewModel.commitChanges(message: commitMessage, at: repo)
+                            try await viewModel.commitChanges(message: commitMessage, at: repo)
                             commitMessage = ""
                             selectedFiles.removeAll()
                         } catch {
-                            self.error = error.localizedDescription
+                            if error.localizedDescription.contains("Changes not staged for commit") {
+                                self.error = "Stage changes to commit."
+                            } else {
+                                self.error = error.localizedDescription
+                            }
+                            
                         }
                     }
                 }

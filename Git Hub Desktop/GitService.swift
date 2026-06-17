@@ -182,7 +182,13 @@ nonisolated extension GitService {
     
     // Commit Diff Files
     func getCommitFiles(hash: String, at repo: String) async throws -> [ChangedFile] {
-        let result = try await run(["diff-tree", "--no-commit-id", "--name-status", "-r", hash], at: repo)
+        let args: [String]
+        if hash.hasPrefix("stash@{") {
+            args = ["diff", "--name-status", "\(hash)^1", hash]
+        } else {
+            args = ["diff-tree", "--no-commit-id", "--name-status", "-r", hash]
+        }
+        let result = try await run(args, at: repo)
         if !result.isSuccess && result.output.isEmpty {
             throw GitError.executionFailed(result.error)
         }
@@ -191,7 +197,13 @@ nonisolated extension GitService {
     
     // Commit Diff
     func getCommitDiff(hash: String, file: String, at repo: String) async throws -> FileDiff {
-        let result = try await run(["show", "--format=", hash, "--", file], at: repo)
+        let args: [String]
+        if hash.hasPrefix("stash@{") {
+            args = ["diff", "\(hash)^1", hash, "--", file]
+        } else {
+            args = ["show", "--format=", hash, "--", file]
+        }
+        let result = try await run(args, at: repo)
         if !result.isSuccess && result.output.isEmpty {
             throw GitError.executionFailed(result.error)
         }
@@ -406,7 +418,6 @@ nonisolated extension GitService {
         let results = result.output
             .split(separator: "\n")
             .compactMap { parseStash(String($0)) }
-        dump(results)
         return results
     }
 
