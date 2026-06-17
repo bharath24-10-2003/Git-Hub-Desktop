@@ -101,7 +101,7 @@ struct StashesView: View {
                         repo: repo,
                         viewModel: viewModel,
                         onBack: {
-                            selectedStash = nil
+                            stashViewPresented = false
                         }
                     )
                     .frame(height: height)
