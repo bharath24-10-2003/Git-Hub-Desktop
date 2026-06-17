@@ -186,7 +186,7 @@ struct ChangesView: View {
                 .padding()
                 
                 Divider()
-                HStack(spacing: 0) {
+                HSplitView {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(viewModel.changedFiles) { file in
@@ -212,8 +212,7 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    
-                    Divider()
+                    .frame(minWidth: 200, idealWidth: 300)
                     
                     // Right: Diff View
                     VStack {
@@ -238,7 +237,7 @@ struct ChangesView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(NSColor.controlBackgroundColor))
                 }
             }
