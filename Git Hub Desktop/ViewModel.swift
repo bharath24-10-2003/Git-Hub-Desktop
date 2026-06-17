@@ -179,6 +179,14 @@ class ViewModel {
         }
     }
     
+    func getCommitFiles(hash: String, at repo: Repo) async throws -> [ChangedFile] {
+        return try await service.getCommitFiles(hash: hash, at: repo.path)
+    }
+    
+    func loadCommitDiff(hash: String, file: String, at repo: Repo) async throws -> FileDiff {
+        return try await service.getCommitDiff(hash: hash, file: file, at: repo.path)
+    }
+    
     // MARK: - Asynchronous Git Actions
     
     private func extractErrorMessage(from result: GitResult) -> String {

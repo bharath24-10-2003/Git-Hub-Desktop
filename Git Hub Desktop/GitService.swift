@@ -180,6 +180,24 @@ nonisolated extension GitService {
         return Set(hashes)
     }
     
+    // Commit Diff Files
+    func getCommitFiles(hash: String, at repo: String) async throws -> [ChangedFile] {
+        let result = try await run(["diff-tree", "--no-commit-id", "--name-status", "-r", hash], at: repo)
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        return parseCommitFiles(result.output)
+    }
+    
+    // Commit Diff
+    func getCommitDiff(hash: String, file: String, at repo: String) async throws -> FileDiff {
+        let result = try await run(["show", "--format=", hash, "--", file], at: repo)
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        return parseDiff(result.output)
+    }
+    
     // Diff
     func getDiff(for file: String, isStaged: Bool, at repo: String) async throws -> FileDiff {
         var args = ["diff"]
@@ -436,6 +454,47 @@ nonisolated extension GitService {
     }
     
     // MARK: - Parsers
+
+    private func parseCommitFiles(_ output: String) -> [ChangedFile] {
+        var files: [ChangedFile] = []
+        let lines = output.components(separatedBy: "\n")
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            
+            var parts = trimmed.components(separatedBy: "\t")
+            if parts.count < 2 {
+                parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+            }
+            guard parts.count >= 2 else { continue }
+            
+            let statusCode = parts[0]
+            let filePath = parts.count > 2 && statusCode.hasPrefix("R") ? parts[2] : parts[1]
+            
+            var cleanPath = filePath.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanPath.hasPrefix("\"") && cleanPath.hasSuffix("\"") {
+                cleanPath = String(cleanPath.dropFirst().dropLast())
+            }
+            
+            var status = "Modified"
+            let firstChar = statusCode.first.map(String.init) ?? "M"
+            switch firstChar.uppercased() {
+            case "A":
+                status = "Added"
+            case "D":
+                status = "Deleted"
+            case "M":
+                status = "Modified"
+            case "R":
+                status = "Renamed"
+            default:
+                status = "Modified"
+            }
+            
+            files.append(ChangedFile(path: cleanPath, status: status, isStaged: false))
+        }
+        return files
+    }
     
     private func parseStatus(_ output: String) -> [ChangedFile] {
         var files: [ChangedFile] = []

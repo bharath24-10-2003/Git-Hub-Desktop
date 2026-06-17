@@ -171,7 +171,7 @@ extension Commit {
     ]
 }
 
-struct GitStash: Identifiable {
+struct GitStash: Identifiable, Hashable {
     let id: String
     let type: String
     let branch: String

@@ -14,34 +14,49 @@ struct HistoryView: View {
     @State var showCherryPickModal: Bool = false
     @State var cherryPickHash: String = ""
     @State var cherryPickError: String?
+    @State private var path = NavigationPath()
     
     var body: some View {
-        VStack {
-            HStack {
-                TitleView(title: "History", desc: "All commits in \(viewModel.historyBranch ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)) branch")
-                BaseButton(title: "Cherry pick") {
-                    showCherryPickModal = true
+        NavigationStack(path: $path) {
+            VStack {
+                HStack {
+                    TitleView(title: "History", desc: "All commits in \(viewModel.historyBranch ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)) branch")
+                    BaseButton(title: "Cherry pick") {
+                        showCherryPickModal = true
+                    }
+                    BaseButton(title: "Refresh") {
+                        Task {
+                            await viewModel.loadRepositoryData(for: repo)
+                        }
+                    }
+                    .padding(.trailing, 24)
                 }
-                BaseButton(title: "Refresh") {
-                    Task {
-                        await viewModel.loadRepositoryData(for: repo)
+                
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(viewModel.commits) { commit in
+                            HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    path.append(commit)
+                                }
+                                .padding(-10)
+                        }
+                        .padding()
                     }
                 }
-                .padding(.trailing, 24)
+                .padding(.bottom, 14)
             }
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    ForEach(viewModel.commits) { commit in
-                        HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
-                            .padding(-10)
-                    }
-                    .padding()
-                }
-            }
-            .padding(.bottom, 14)
             .sheet(isPresented: $showCherryPickModal) {
                 cherryPickModal
+            }
+            .navigationDestination(for: Commit.self) { commit in
+                CommitDiffDetailView(
+                    hash: commit.id,
+                    title: commit.message,
+                    repo: repo,
+                    viewModel: viewModel
+                )
             }
         }
     }
