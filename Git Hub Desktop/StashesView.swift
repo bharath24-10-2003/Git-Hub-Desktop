@@ -77,7 +77,7 @@ struct StashesView: View {
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         selectedStash = stash
-                                        stashViewPresented.toggle()
+                                        stashViewPresented = true
                                     }
                                     .padding(-10)
                                 }
