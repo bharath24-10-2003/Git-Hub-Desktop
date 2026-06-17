@@ -46,7 +46,7 @@ struct HistoryView: View {
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         SelectedCommit = commit
-                                        changesViewPresented.toggle()
+                                        changesViewPresented = true
                                     }
                                     .padding(-10)
                             }
@@ -67,7 +67,7 @@ struct HistoryView: View {
                         repo: repo,
                         viewModel: viewModel,
                         onBack: {
-                            SelectedCommit = nil
+                            changesViewPresented = false
                         }
                     )
                     .frame(height: height)

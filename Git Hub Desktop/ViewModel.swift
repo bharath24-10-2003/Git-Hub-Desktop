@@ -175,6 +175,7 @@ class ViewModel {
             self.currentDiff = diff
         } catch {
             self.errorMessage = error.localizedDescription
+            throw error
         }
     }
     
