@@ -138,7 +138,6 @@ class ViewModel {
             self.commits = commitHistory
             self.isCherryPicking = isCherryPickInProgress
             self.stashes = stashes
-            self.stashes = stashes
             
             // Clear diff if selected file no longer exists
             if let selected = self.selectedFileForDiff {
