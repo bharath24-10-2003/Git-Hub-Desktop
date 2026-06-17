@@ -12,80 +12,100 @@ struct StashesView: View {
     let repo: Repo
     let viewModel: ViewModel
     @State var error: String? = nil
-    @State private var path = NavigationPath()
+    @State var selectedStash: GitStash? = nil
+    @State var height: CGFloat = 0
+    @State var stashViewPresented: Bool = false
     
     var body: some View {
-        NavigationStack(path: $path) {
-            VStack {
-                HStack {
-                    TitleView(title: "Stash", desc: "All Stashes in the repository is shown here. Apply, discard or restore the stash to the current branch.")
-                }
-                
-                if let error {
-                    ErrorBannerView(message: error ) {
-                        self.error = nil
-                    }
-                    .padding(.horizontal)
-                }
-                if !viewModel.stashes.isEmpty {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(spacing: 0) {
-                            ForEach(viewModel.stashes) { stash in
-                                SingleStashView(stash: stash, applyStash: {
-                                    Task {
-                                        do {
-                                            let result = try await viewModel.applyStash(at: repo)
-                                            if !result.isSuccess {
-                                                self.error = result.error
-                                            }
-                                        } catch {
-                                            self.error = error.localizedDescription
-                                        }
-                                    }
-                                }, popStash: {
-                                    Task {
-                                        do {
-                                            let result = try await viewModel.popStash(at: repo)
-                                            if !result.isSuccess {
-                                                self.error = result.error
-                                            }
-                                        } catch {
-                                            self.error = error.localizedDescription
-                                        }
-                                    }
-                                }, deleteStash: {
-                                    Task {
-                                        do {
-                                            let result = try await viewModel.dropStash(at: repo)
-                                            if !result.isSuccess {
-                                                self.error = result.error
-                                            }
-                                        } catch {
-                                            self.error = error.localizedDescription
-                                        }
-                                    }
-                                })
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    path.append(stash)
-                                }
-                                .padding(-10)
-                            }
-                            .padding()
-                        }
-                    }
-                    .padding(.bottom, 14)
-                } else {
-                    NoStashView()
+        VStack {
+            HStack {
+                TitleView(title: "Stash", desc: "All Stashes in the repository is shown here. Apply, discard or restore the stash to the current branch.")
+            }
+            .onChange(of: stashViewPresented) { oldValue, newValue in
+                if !newValue {
+                    selectedStash = nil
                 }
             }
-            .navigationDestination(for: GitStash.self) { stash in
-                CommitDiffDetailView(
-                    hash: stash.id,
-                    title: stash.message,
-                    repo: repo,
-                    viewModel: viewModel
-                )
+            
+            if let error {
+                ErrorBannerView(message: error ) {
+                    self.error = nil
+                }
+                .padding(.horizontal)
+            }
+            
+            ZStack {
+                GeometryReader { proxy in
+                    if !viewModel.stashes.isEmpty {
+                        ScrollView(.vertical, showsIndicators: false) {
+                            LazyVStack(spacing: 0) {
+                                ForEach(viewModel.stashes) { stash in
+                                    SingleStashView(stash: stash, applyStash: {
+                                        Task {
+                                            do {
+                                                let result = try await viewModel.applyStash(at: repo)
+                                                if !result.isSuccess {
+                                                    self.error = result.error
+                                                }
+                                            } catch {
+                                                self.error = error.localizedDescription
+                                            }
+                                        }
+                                    }, popStash: {
+                                        Task {
+                                            do {
+                                                let result = try await viewModel.popStash(at: repo)
+                                                if !result.isSuccess {
+                                                    self.error = result.error
+                                                }
+                                            } catch {
+                                                self.error = error.localizedDescription
+                                            }
+                                        }
+                                    }, deleteStash: {
+                                        Task {
+                                            do {
+                                                let result = try await viewModel.dropStash(at: repo)
+                                                if !result.isSuccess {
+                                                    self.error = result.error
+                                                }
+                                            } catch {
+                                                self.error = error.localizedDescription
+                                            }
+                                        }
+                                    })
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedStash = stash
+                                        stashViewPresented.toggle()
+                                    }
+                                    .padding(-10)
+                                }
+                                .padding()
+                            }
+                        }
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .padding(.bottom, 14)
+                        .onAppear {
+                            self.height = proxy.size.height
+                        }
+                    } else {
+                        NoStashView()
+                    }
+                }
+                
+                if let stash = selectedStash {
+                    CommitDiffDetailView(
+                        hash: stash.id,
+                        title: stash.message,
+                        repo: repo,
+                        viewModel: viewModel,
+                        onBack: {
+                            selectedStash = nil
+                        }
+                    )
+                    .frame(height: height)
+                }
             }
         }
     }

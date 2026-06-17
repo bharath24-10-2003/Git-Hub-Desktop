@@ -12,6 +12,7 @@ struct CommitDiffDetailView: View {
     let title: String
     let repo: Repo
     let viewModel: ViewModel
+    var onBack: (() -> Void)? = nil
     
     @State private var changedFiles: [ChangedFile] = []
     @State private var selectedFileForDiff: ChangedFile? = nil
@@ -21,6 +22,31 @@ struct CommitDiffDetailView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            if let onBack = onBack {
+                // Header with Back Button
+                HStack(spacing: 16) {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    .clipShape(Circle())
+                    .buttonStyle(.glass)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.title3)
+                            .bold()
+                        Text("Hash: \(hash)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding()
+                
+                Divider()
+            }
+            
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -75,6 +101,7 @@ struct CommitDiffDetailView: View {
                 }
             }
         }
+        .background(Color(NSColor.windowBackgroundColor))
         .navigationTitle(title)
         .navigationSubtitle("Hash: \(hash)")
         .task {

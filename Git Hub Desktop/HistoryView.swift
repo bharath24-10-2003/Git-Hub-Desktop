@@ -14,49 +14,67 @@ struct HistoryView: View {
     @State var showCherryPickModal: Bool = false
     @State var cherryPickHash: String = ""
     @State var cherryPickError: String?
-    @State private var path = NavigationPath()
+    @State var changesViewPresented: Bool = false
+    @State var SelectedCommit: Commit?
+    @State var height: CGFloat = 0
     
     var body: some View {
-        NavigationStack(path: $path) {
-            VStack {
-                HStack {
-                    TitleView(title: "History", desc: "All commits in \(viewModel.historyBranch ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)) branch")
-                    BaseButton(title: "Cherry pick") {
-                        showCherryPickModal = true
-                    }
-                    BaseButton(title: "Refresh") {
-                        Task {
-                            await viewModel.loadRepositoryData(for: repo)
-                        }
-                    }
-                    .padding(.trailing, 24)
+        VStack {
+            HStack {
+                TitleView(title: "History", desc: "All commits in \(viewModel.historyBranch ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)) branch")
+                BaseButton(title: "Cherry pick") {
+                    showCherryPickModal = true
                 }
-                
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(viewModel.commits) { commit in
-                            HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    path.append(commit)
-                                }
-                                .padding(-10)
-                        }
-                        .padding()
+                BaseButton(title: "Refresh") {
+                    Task {
+                        await viewModel.loadRepositoryData(for: repo)
                     }
                 }
-                .padding(.bottom, 14)
+                .padding(.trailing, 24)
+            }
+            .onChange(of: changesViewPresented) { oldValue, newValue in
+                if !newValue {
+                    SelectedCommit = nil
+                }
+            }
+            ZStack {
+                GeometryReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(viewModel.commits) { commit in
+                                HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        SelectedCommit = commit
+                                        changesViewPresented.toggle()
+                                    }
+                                    .padding(-10)
+                            }
+                            .padding()
+                        }
+                    }
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .padding(.bottom, 14)
+                    .onAppear {
+                        self.height = proxy.size.height
+                    }
+                }
+
+                if let commit = SelectedCommit {
+                    CommitDiffDetailView(
+                        hash: commit.id,
+                        title: commit.message,
+                        repo: repo,
+                        viewModel: viewModel,
+                        onBack: {
+                            SelectedCommit = nil
+                        }
+                    )
+                    .frame(height: height)
+                }
             }
             .sheet(isPresented: $showCherryPickModal) {
                 cherryPickModal
-            }
-            .navigationDestination(for: Commit.self) { commit in
-                CommitDiffDetailView(
-                    hash: commit.id,
-                    title: commit.message,
-                    repo: repo,
-                    viewModel: viewModel
-                )
             }
         }
     }

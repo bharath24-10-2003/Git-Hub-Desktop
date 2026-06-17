@@ -96,7 +96,7 @@ struct BranchString: Identifiable {
     let string: String
 }
 
-struct Commit: Identifiable,Hashable {
+struct Commit: Identifiable, Hashable, Sendable {
     let id: String
     let shortHash: String
     let author: String
