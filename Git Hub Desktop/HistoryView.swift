@@ -130,7 +130,7 @@ struct HistoryCommitView: View {
                     Button {
                         self.showResetModal = true
                     } label: {
-                        Text("Reset")
+                        Text("Make Head")
                             .padding(3)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 20))

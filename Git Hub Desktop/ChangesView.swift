@@ -214,33 +214,26 @@ struct ChangesView: View {
                     }
                     .frame(minWidth: 200, idealWidth: 300)
                     
-                    // Right: Diff View
-                    VStack {
-                        if let selectedFile = viewModel.selectedFileForDiff {
-                            if let diff = viewModel.currentDiff {
-                                DiffRendererView(diff: diff, file: selectedFile)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            } else {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if viewModel.selectedFileForDiff != nil {
+                        // Right: Diff View
+                        VStack {
+                            if let selectedFile = viewModel.selectedFileForDiff {
+                                if let diff = viewModel.currentDiff {
+                                    DiffRendererView(diff: diff, file: selectedFile)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                } else {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                }
                             }
-                        } else {
-                            VStack {
-                                Image(systemName: "doc.text.magnifyingglass")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.secondary)
-                                    .padding(.bottom, 8)
-                                Text("Select a file to view its diff")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
+                        .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .transition(.move(edge: .trailing))
                     }
-                    .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(NSColor.controlBackgroundColor))
                 }
+                .animation(.easeInOut(duration: 0.3), value: viewModel.selectedFileForDiff != nil)
             }
         }
         .overlay {

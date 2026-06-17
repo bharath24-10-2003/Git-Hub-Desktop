@@ -46,7 +46,7 @@ struct DiffRendererView: View {
             Divider()
             
             GeometryReader { geometry in
-                ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                ScrollView(showsIndicators: true) {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         let lines = diff.lines.filter { $0.type != .fileHeader }
                         ForEach(lines) { line in
