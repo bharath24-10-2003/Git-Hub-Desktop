@@ -96,12 +96,13 @@ struct BranchString: Identifiable {
     let string: String
 }
 
-struct Commit: Identifiable,Hashable {
+struct Commit: Identifiable, Hashable, Sendable {
     let id: String
     let shortHash: String
     let author: String
     let date: String
     let message: String
+    var isPushed: Bool = true
     
     private var parsedDate: Date? {
         let formatter = DateFormatter()
@@ -170,7 +171,7 @@ extension Commit {
     ]
 }
 
-struct GitStash: Identifiable {
+struct GitStash: Identifiable, Hashable {
     let id: String
     let type: String
     let branch: String

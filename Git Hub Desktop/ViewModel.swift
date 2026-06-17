@@ -44,6 +44,10 @@ class ViewModel {
     var errorMessage: String? = nil
     var historyBranch: String? = nil
     
+    // MARK: - Diff State
+    var selectedFileForDiff: ChangedFile? = nil
+    var currentDiff: FileDiff? = nil
+    
     // MARK: - Presentation Flags
     var showCloneModal: Bool = false
     var showAddRepoModal: Bool = false
@@ -112,7 +116,13 @@ class ViewModel {
             
             // 4. Log history
             let branchForLog = self.historyBranch ?? detectedCurrentBranch
-            let commitHistory = try await service.log(branch: branchForLog, at: path)
+            var commitHistory = try await service.log(branch: branchForLog, at: path)
+            let unpushedCommits = await service.getUnpushedCommits(branch: branchForLog, at: path)
+            for i in 0..<commitHistory.count {
+                if unpushedCommits.contains(commitHistory[i].id) {
+                    commitHistory[i].isPushed = false
+                }
+            }
             
             // 5. Check if cherry-pick is in progress
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
@@ -129,6 +139,20 @@ class ViewModel {
             self.isCherryPicking = isCherryPickInProgress
             self.stashes = stashes
             
+            // Clear diff if selected file no longer exists
+            if let selected = self.selectedFileForDiff {
+                if let updatedFile = files.first(where: { $0.id == selected.id }) {
+                    self.selectedFileForDiff = updatedFile
+                    // Re-load diff if file still exists
+                    Task {
+                        try? await self.loadDiff(for: updatedFile, at: repo)
+                    }
+                } else {
+                    self.selectedFileForDiff = nil
+                    self.currentDiff = nil
+                }
+            }
+            
             // Update active branch name in RepoStore so it persists
             if let index = store.repos.firstIndex(where: { $0.id == repo.id }) {
                 store.repos[index].currentBranch = detectedCurrentBranch
@@ -137,6 +161,30 @@ class ViewModel {
             self.errorMessage = error.localizedDescription
             print("Failed to load repo data:", error)
         }
+    }
+    
+    // MARK: - Diff
+    
+    @MainActor
+    func loadDiff(for file: ChangedFile, at repo: Repo) async throws {
+        self.selectedFileForDiff = file
+        self.currentDiff = nil // clear while loading
+        
+        do {
+            let diff = try await service.getDiff(for: file.path, isStaged: file.isStaged, at: repo.path)
+            self.currentDiff = diff
+        } catch {
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+    
+    func getCommitFiles(hash: String, at repo: Repo) async throws -> [ChangedFile] {
+        return try await service.getCommitFiles(hash: hash, at: repo.path)
+    }
+    
+    func loadCommitDiff(hash: String, file: String, at repo: Repo) async throws -> FileDiff {
+        return try await service.getCommitDiff(hash: hash, file: file, at: repo.path)
     }
     
     // MARK: - Asynchronous Git Actions
@@ -267,12 +315,17 @@ class ViewModel {
     
     @discardableResult
     func pull(at repo: Repo) async throws -> GitResult {
-        let result = try await service.pull(at: repo.path)
-            if !result.isSuccess {
+        let result: GitResult
+        if !currentBranch.isEmpty {
+            result = try await service.pull(branch: currentBranch, at: repo.path)
+        } else {
+            result = try await service.pull(at: repo.path)
+        }
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
@@ -372,10 +425,20 @@ class ViewModel {
     func revertCommit(_ hash: String, at repo: Repo) async throws -> GitResult {
         let result = try await service.revert(commit: hash, at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
-        }
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
             await loadRepositoryData(for: repo)
             return result
+    }
+    
+    @discardableResult
+    func resetCommit(_ hash: String, hard: Bool = false, at repo: Repo) async throws -> GitResult {
+        let result = try await service.reset(commit: hash, hard: hard, at: repo.path)
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult

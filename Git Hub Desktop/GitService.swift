@@ -170,6 +170,115 @@ nonisolated extension GitService {
         return parseLog(result.output)
     }
     
+    // Get unpushed commits
+    func getUnpushedCommits(branch: String, at repo: String) async -> Set<String> {
+        let result = try? await run(["log", branch, "--not", "--remotes", "--format=%H"], at: repo)
+        guard let output = result?.output, result?.isSuccess == true else {
+            return []
+        }
+        let hashes = output.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        return Set(hashes)
+    }
+    
+    // Commit Diff Files
+    func getCommitFiles(hash: String, at repo: String) async throws -> [ChangedFile] {
+        let args: [String]
+        if hash.hasPrefix("stash@{") {
+            args = ["diff", "--name-status", "\(hash)^1", hash]
+        } else {
+            args = ["diff-tree", "--no-commit-id", "--name-status", "-r", hash]
+        }
+        let result = try await run(args, at: repo)
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        return parseCommitFiles(result.output)
+    }
+    
+    // Commit Diff
+    func getCommitDiff(hash: String, file: String, at repo: String) async throws -> FileDiff {
+        let args: [String]
+        if hash.hasPrefix("stash@{") {
+            args = ["diff", "\(hash)^1", hash, "--", file]
+        } else {
+            args = ["show", "--format=", hash, "--", file]
+        }
+        let result = try await run(args, at: repo)
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        return parseDiff(result.output)
+    }
+    
+    // Diff
+    func getDiff(for file: String, isStaged: Bool, at repo: String) async throws -> FileDiff {
+        var args = ["diff"]
+        if isStaged {
+            args.append("--cached")
+        }
+        args.append(file)
+        let result = try await run(args, at: repo)
+        
+        // If there's an error and no output, throw it
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        
+        return parseDiff(result.output)
+    }
+    
+    private func parseDiff(_ output: String) -> FileDiff {
+        let lines = output.components(separatedBy: .newlines)
+        var diffLines: [DiffLine] = []
+        var oldLine: Int? = nil
+        var newLine: Int? = nil
+        var isNewFile = false
+        var isDeletedFile = false
+        
+        for line in lines {
+            if line.hasPrefix("diff --git") {
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("new file mode") {
+                isNewFile = true
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("deleted file mode") {
+                isDeletedFile = true
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("index") || line.hasPrefix("---") || line.hasPrefix("+++") {
+                diffLines.append(DiffLine(text: line, type: .fileHeader, oldLineNumber: nil, newLineNumber: nil))
+            } else if line.hasPrefix("@@") {
+                // Parse hunk header
+                // @@ -oldStart,oldLines +newStart,newLines @@
+                diffLines.append(DiffLine(text: line, type: .hunkHeader, oldLineNumber: nil, newLineNumber: nil))
+                
+                // Extract line numbers using regex
+                if let regex = try? NSRegularExpression(pattern: #"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@"#),
+                   let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
+                    if let oldRange = Range(match.range(at: 1), in: line), let oldStart = Int(line[oldRange]) {
+                        oldLine = oldStart
+                    }
+                    if let newRange = Range(match.range(at: 2), in: line), let newStart = Int(line[newRange]) {
+                        newLine = newStart
+                    }
+                }
+            } else if line.hasPrefix("+") {
+                diffLines.append(DiffLine(text: String(line.dropFirst()), type: .added, oldLineNumber: nil, newLineNumber: newLine))
+                if newLine != nil { newLine! += 1 }
+            } else if line.hasPrefix("-") {
+                diffLines.append(DiffLine(text: String(line.dropFirst()), type: .removed, oldLineNumber: oldLine, newLineNumber: nil))
+                if oldLine != nil { oldLine! += 1 }
+            } else if line.hasPrefix(" ") {
+                diffLines.append(DiffLine(text: String(line.dropFirst()), type: .context, oldLineNumber: oldLine, newLineNumber: newLine))
+                if oldLine != nil { oldLine! += 1 }
+                if newLine != nil { newLine! += 1 }
+            } else if line.hasPrefix("\\ No newline at end of file") {
+                diffLines.append(DiffLine(text: line, type: .context, oldLineNumber: nil, newLineNumber: nil))
+            }
+        }
+        
+        return FileDiff(lines: diffLines, isNewFile: isNewFile, isDeletedFile: isDeletedFile)
+    }
+    
     @discardableResult
     func fetch(at repo:String) async throws -> GitResult {
         try await run(["fetch"], at: repo)
@@ -309,7 +418,6 @@ nonisolated extension GitService {
         let results = result.output
             .split(separator: "\n")
             .compactMap { parseStash(String($0)) }
-        dump(results)
         return results
     }
 
@@ -357,6 +465,47 @@ nonisolated extension GitService {
     }
     
     // MARK: - Parsers
+
+    private func parseCommitFiles(_ output: String) -> [ChangedFile] {
+        var files: [ChangedFile] = []
+        let lines = output.components(separatedBy: "\n")
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            
+            var parts = trimmed.components(separatedBy: "\t")
+            if parts.count < 2 {
+                parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+            }
+            guard parts.count >= 2 else { continue }
+            
+            let statusCode = parts[0]
+            let filePath = parts.count > 2 && statusCode.hasPrefix("R") ? parts[2] : parts[1]
+            
+            var cleanPath = filePath.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleanPath.hasPrefix("\"") && cleanPath.hasSuffix("\"") {
+                cleanPath = String(cleanPath.dropFirst().dropLast())
+            }
+            
+            var status = "Modified"
+            let firstChar = statusCode.first.map(String.init) ?? "M"
+            switch firstChar.uppercased() {
+            case "A":
+                status = "Added"
+            case "D":
+                status = "Deleted"
+            case "M":
+                status = "Modified"
+            case "R":
+                status = "Renamed"
+            default:
+                status = "Modified"
+            }
+            
+            files.append(ChangedFile(path: cleanPath, status: status, isStaged: false))
+        }
+        return files
+    }
     
     private func parseStatus(_ output: String) -> [ChangedFile] {
         var files: [ChangedFile] = []
@@ -426,11 +575,20 @@ nonisolated extension GitService {
         return commits
     }
     
-    // MARK: - Revert
+    // MARK: - Revert & Reset
     
     @discardableResult
     func revert(commit: String, at repo: String) async throws -> GitResult {
         try await run(["revert", "--no-edit", commit], at: repo)
+    }
+    
+    @discardableResult
+    func reset(commit: String, hard: Bool = false, at repo: String) async throws -> GitResult {
+        if hard {
+            return try await run(["reset", "--hard", commit], at: repo)
+        } else {
+            return try await run(["reset", "--soft", commit], at: repo)
+        }
     }
     
     // MARK: - Discard and Unstage

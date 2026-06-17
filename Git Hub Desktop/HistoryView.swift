@@ -14,6 +14,9 @@ struct HistoryView: View {
     @State var showCherryPickModal: Bool = false
     @State var cherryPickHash: String = ""
     @State var cherryPickError: String?
+    @State var changesViewPresented: Bool = false
+    @State var SelectedCommit: Commit?
+    @State var height: CGFloat = 0
     
     var body: some View {
         VStack {
@@ -29,17 +32,47 @@ struct HistoryView: View {
                 }
                 .padding(.trailing, 24)
             }
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    ForEach(viewModel.commits) { commit in
-                        HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
-                            .padding(-10)
-                    }
-                    .padding()
+            .onChange(of: changesViewPresented) { oldValue, newValue in
+                if !newValue {
+                    SelectedCommit = nil
                 }
             }
-            .padding(.bottom, 14)
+            ZStack {
+                GeometryReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(viewModel.commits) { commit in
+                                HistoryCommitView(commit: commit, repo: repo, viewModel: viewModel)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        SelectedCommit = commit
+                                        changesViewPresented = true
+                                    }
+                                    .padding(-10)
+                            }
+                            .padding()
+                        }
+                    }
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .padding(.bottom, 14)
+                    .onAppear {
+                        self.height = proxy.size.height
+                    }
+                }
+
+                if let commit = SelectedCommit {
+                    CommitDiffDetailView(
+                        hash: commit.id,
+                        title: commit.message,
+                        repo: repo,
+                        viewModel: viewModel,
+                        onBack: {
+                            changesViewPresented = false
+                        }
+                    )
+                    .frame(height: height)
+                }
+            }
             .sheet(isPresented: $showCherryPickModal) {
                 cherryPickModal
             }
@@ -91,6 +124,8 @@ struct HistoryCommitView: View {
     let repo: Repo
     let viewModel: ViewModel
     @State private var revertError: String?
+    @State private var resetError: String?
+    @State private var showResetModal: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -121,11 +156,25 @@ struct HistoryCommitView: View {
                     }
                 }
                 Spacer()
+                if !commit.isPushed {
+                    Image(systemName: "icloud.slash.fill")
+                }
+                if isCurrentBranch {
+                    Button {
+                        self.showResetModal = true
+                    } label: {
+                        Text("Make Head")
+                            .padding(3)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .buttonStyle(.glass)
+                }
+                
                 Button {
                     self.revertError = nil
                     Task {
                         do {
-                            _ = try await viewModel.revertCommit(commit.id, at: repo)
+                            try await viewModel.revertCommit(commit.id, at: repo)
                         } catch {
                             self.revertError = error.localizedDescription
                         }
@@ -147,11 +196,70 @@ struct HistoryCommitView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 4)
             }
+            if let resetError {
+                ErrorBannerView(message: resetError) {
+                    self.resetError = nil
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+            }
         }
         .overlay {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.gray, lineWidth: 1)
                 .opacity(0.2)
+        }
+        .sheet(isPresented: $showResetModal) {
+            resetModal
+        }
+    }
+    
+    private var isCurrentBranch: Bool {
+        return (viewModel.historyBranch == nil) || (viewModel.historyBranch == viewModel.currentBranch)
+    }
+    
+    private var resetModal: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ModalDescription(title: "Reset Commit", description: "Choose how you want to reset to commit \(commit.shortHash)")
+                .padding()
+            
+            Divider()
+            
+            HStack {
+                BaseButton(title: "Soft Reset") {
+                    self.resetError = nil
+                    Task {
+                        do {
+                            try await viewModel.resetCommit(commit.id, hard: false, at: repo)
+                            showResetModal = false
+                        } catch {
+                            self.resetError = error.localizedDescription
+                            showResetModal = false
+                        }
+                    }
+                }
+                .padding(.trailing, 24)
+                
+                BaseButton(title: "Hard Reset") {
+                    self.resetError = nil
+                    Task {
+                        do {
+                            try await viewModel.resetCommit(commit.id, hard: true, at: repo)
+                            showResetModal = false
+                        } catch {
+                            self.resetError = error.localizedDescription
+                            showResetModal = false
+                        }
+                    }
+                }
+                .padding(.trailing, 24)
+                
+                BaseButton(title: "Cancel") {
+                    showResetModal = false
+                    resetError = nil
+                }
+            }
+            .padding()
         }
     }
     
