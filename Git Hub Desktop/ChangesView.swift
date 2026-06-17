@@ -220,6 +220,7 @@ struct ChangesView: View {
                             if let diff = viewModel.currentDiff {
                                 DiffRendererView(diff: diff, file: selectedFile)
                                     .padding()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                             } else {
                                 ProgressView()
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)

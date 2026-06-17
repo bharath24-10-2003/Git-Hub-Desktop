@@ -45,15 +45,20 @@ struct DiffRendererView: View {
             
             Divider()
             
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(diff.lines) { line in
-                        DiffLineView(line: line, language: language)
+            GeometryReader { geometry in
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        let lines = diff.lines.filter { $0.type != .fileHeader }
+                        ForEach(lines) { line in
+                            DiffLineView(line: line, language: language)
+                        }
                     }
+                    .padding(.vertical, 8)
+                    .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
                 }
-                .padding(.vertical, 8)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(NSColor.textBackgroundColor))
         .cornerRadius(8)
         .overlay(
