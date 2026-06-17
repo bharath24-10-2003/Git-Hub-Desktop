@@ -273,12 +273,17 @@ class ViewModel {
     
     @discardableResult
     func pull(at repo: Repo) async throws -> GitResult {
-        let result = try await service.pull(at: repo.path)
-            if !result.isSuccess {
+        let result: GitResult
+        if !currentBranch.isEmpty {
+            result = try await service.pull(branch: currentBranch, at: repo.path)
+        } else {
+            result = try await service.pull(at: repo.path)
+        }
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
