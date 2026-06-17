@@ -205,16 +205,22 @@ class ViewModel {
         }
         
         do {
-            let result = try await service.clone(url: url, to: destinationPath)
+            let repoName = extractRepoName(from: url)
+            var finalPath = destinationPath
+            let pathURL = URL(fileURLWithPath: destinationPath)
+            if pathURL.lastPathComponent != repoName {
+                finalPath = pathURL.appendingPathComponent(repoName).path
+            }
+            
+            let result = try await service.clone(url: url, to: finalPath)
             
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
                 return result
             }
             
-            let repoName = extractRepoName(from: url)
-            store.addRepo(name: repoName, path: destinationPath)
-            self.selectedRepo = store.repos.first(where: { $0.path == destinationPath })
+            store.addRepo(name: repoName, path: finalPath)
+            self.selectedRepo = store.repos.first(where: { $0.path == finalPath })
             return result
         } catch {
             self.errorMessage = error.localizedDescription
