@@ -259,6 +259,13 @@ class ViewModel {
         self.selectedRepo = store.repos.first(where: { $0.path == path })
     }
     
+    func removeRepository(_ repo: Repo) {
+        store.removeRepo(repo)
+        if selectedRepo?.id == repo.id {
+            selectedRepo = store.repos.first
+        }
+    }
+    
     @discardableResult
     func stageAll(at repo: Repo) async throws -> GitResult {
         let result = try await service.addAll(at: repo.path)

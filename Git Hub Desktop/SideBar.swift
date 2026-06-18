@@ -45,6 +45,21 @@ struct Sidebar: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
+                            NSWorkspace.shared.open(URL(fileURLWithPath: repo.path))
+                        } label: {
+                            Label("Show in Finder", systemImage: "finder")
+                        }
+                        
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            viewModel.removeRepository(repo)
+                        } label: {
+                            Label("Remove Repository", systemImage: "trash")
+                        }
+                    }
                 }
                 
                 Divider()
