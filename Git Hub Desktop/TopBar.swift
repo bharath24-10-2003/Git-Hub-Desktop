@@ -57,7 +57,7 @@ struct TopBar: View {
                             }
                         }
                     }
-                    ProminentBaseButton(title: "Push", image: Image(.push)) {
+                    ProminentBaseButton(title: "Push" + (viewModel.unPushedCommits != 0 ? " (\(viewModel.unPushedCommits))" : ""), image: Image(.push)) {
                         self.error = nil
                         Task {
                             do {

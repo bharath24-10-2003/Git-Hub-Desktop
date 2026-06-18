@@ -45,6 +45,7 @@ class ViewModel {
     var isCherryPicking: Bool = false
     var errorMessage: String? = nil
     var historyBranch: String? = nil
+    var unPushedCommits: Int = 0
     var rebaseState = RebaseState(inProgress: false, currentCommitHash: "", currentCommitMessage: "", currentProgress: 0, totalProgress: 0, ontoBranch: "", headName: "")
     var mergeState = MergeState(inProgress: false, sourceBranch: "", targetBranch: "", currentCommitHash: "", defaultCommitMessage: "")
     
@@ -125,6 +126,7 @@ class ViewModel {
             let branchForLog = self.historyBranch ?? detectedCurrentBranch
             var commitHistory = try await service.log(branch: branchForLog, at: path)
             let unpushedCommits = await service.getUnpushedCommits(branch: branchForLog, at: path)
+            self.unPushedCommits = unpushedCommits.count
             for i in 0..<commitHistory.count {
                 if unpushedCommits.contains(commitHistory[i].id) {
                     commitHistory[i].isPushed = false
