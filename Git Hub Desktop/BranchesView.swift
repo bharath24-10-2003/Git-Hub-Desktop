@@ -55,7 +55,7 @@ struct BranchesView: View {
                             }
                         }
                     }
-                    BaseButton(title: "Pull Branch") {
+                    BaseButton(title: "Merge/Rebase Branch") {
                         viewModel.selectedBranchForAction = selected
                         viewModel.showMergeModal = true
                     }

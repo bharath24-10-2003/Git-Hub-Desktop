@@ -71,6 +71,16 @@ struct ContentView: View {
                 RenameBranchModal(repo: repo, viewModel: viewModel)
             }
         }
+        .sheet(isPresented: $viewModel.showRebaseModal) {
+            if let repo = viewModel.selectedRepo {
+                RebaseAssistantModal(repo: repo, viewModel: viewModel)
+            }
+        }
+        .sheet(isPresented: $viewModel.showMergeAssistantModal) {
+            if let repo = viewModel.selectedRepo {
+                MergeAssistantModal(repo: repo, viewModel: viewModel)
+            }
+        }
         .overlay {
             if viewModel.isLoading {
                 ZStack {

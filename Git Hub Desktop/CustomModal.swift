@@ -425,13 +425,14 @@ struct PullBranchModal: View {
     let viewModel: ViewModel
     
     @State private var error: String?
+    @State private var isLoading: Bool = false
     
     var body: some View {
         let sourceBranch = viewModel.selectedBranchForAction ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
         VStack (alignment:.leading) {
             ModalDescription(
                 title: "Merge into current branch",
-                description: "Are you sure want to pull from '\(sourceBranch)' into the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'?"
+                description: "Are you sure want to merge '\(sourceBranch)' into the current branch '\(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)'?"
             )
             
             if let error {
@@ -446,6 +447,11 @@ struct PullBranchModal: View {
 
             HStack {
                 Spacer()
+                
+                if isLoading {
+                    ProgressView()
+                }
+                
                 BaseButton(title: "Cancel") {
                     viewModel.showMergeModal = false
                 }
@@ -454,9 +460,12 @@ struct PullBranchModal: View {
                     self.error = nil
                     Task {
                         do {
-                            _ = try await viewModel.pull(name: sourceBranch, rebase: true, at: repo)
+                            isLoading = true
+                            try await viewModel.rebaseBranch(name: sourceBranch, at: repo)
+                            isLoading = false
                             viewModel.showMergeModal = false
                         } catch {
+                            isLoading = false
                             self.error = error.localizedDescription
                         }
                     }
@@ -466,9 +475,12 @@ struct PullBranchModal: View {
                     self.error = nil
                     Task {
                         do {
-                            _ = try await viewModel.pull(name: sourceBranch, at: repo)
+                            isLoading = true
+                            try await viewModel.mergeBranch(name: sourceBranch, at: repo)
+                            isLoading = false
                             viewModel.showMergeModal = false
                         } catch {
+                            isLoading = false
                             self.error = error.localizedDescription
                         }
                     }

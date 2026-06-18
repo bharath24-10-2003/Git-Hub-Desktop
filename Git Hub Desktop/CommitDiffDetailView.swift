@@ -78,7 +78,7 @@ struct CommitDiffDetailView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 200, idealWidth: 300)
+                    .frame(maxWidth: 400)
                     
                     // Right Pane: Diff
                     if selectedFileForDiff != nil {
@@ -92,6 +92,8 @@ struct CommitDiffDetailView: View {
                                     ProgressView()
                                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 }
+                            } else {
+                                NoStashView()
                             }
                         }
                         .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
@@ -99,6 +101,7 @@ struct CommitDiffDetailView: View {
                         .transition(.move(edge: .trailing))
                     }
                 }
+                .id(selectedFileForDiff == nil)
             }
         }
         .background(Color(NSColor.windowBackgroundColor))

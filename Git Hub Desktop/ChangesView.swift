@@ -20,6 +20,14 @@ struct ChangesView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            if viewModel.rebaseState.inProgress {
+                rebaseWarningSection
+                    .padding(.top, 16)
+            }
+            if viewModel.mergeState.inProgress {
+                mergeWarningSection
+                    .padding(.top, 16)
+            }
             if viewModel.isCherryPicking {
                 if let error {
                     ErrorBannerView(message: error) {
@@ -95,6 +103,62 @@ struct ChangesView: View {
                         self.error = error.localizedDescription
                     }
                 }
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+    
+    var rebaseWarningSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Rebase in Progress")
+                        .font(.headline)
+                }
+                Text("This repository is currently in a rebasing state. Click the assistant button to resolve conflicts and continue.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            SmallProminentButton(title: "Open Rebase Assistant") {
+                viewModel.showRebaseModal = true
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+    
+    var mergeWarningSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Merge in Progress")
+                        .font(.headline)
+                }
+                Text("This repository is currently in a merging state. Click the assistant button to resolve conflicts and continue.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            SmallProminentButton(title: "Open Merge Assistant") {
+                viewModel.showMergeAssistantModal = true
             }
         }
         .padding()
@@ -217,7 +281,7 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 200, idealWidth: 300)
+                    .frame(minWidth: 400)
                     
                     if viewModel.selectedFileForDiff != nil {
                         // Right: Diff View
@@ -233,11 +297,12 @@ struct ChangesView: View {
                                 }
                             }
                         }
-                        .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(minWidth: 500)
                         .background(Color(NSColor.controlBackgroundColor))
                         .transition(.move(edge: .trailing))
                     }
                 }
+                .id(viewModel.selectedFileForDiff == nil)
                 .animation(.easeInOut(duration: 0.3), value: viewModel.selectedFileForDiff != nil)
             }
         }
