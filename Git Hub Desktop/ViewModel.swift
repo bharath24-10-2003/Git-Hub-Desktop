@@ -40,6 +40,7 @@ class ViewModel {
     
     var isCloning: Bool = false
     var isLoading: Bool = false
+    var loadingMessage: String = "Loading..."
     var isCherryPicking: Bool = false
     var errorMessage: String? = nil
     var historyBranch: String? = nil
@@ -79,6 +80,7 @@ class ViewModel {
     // MARK: - Asynchronous Data Loader
     
     func loadRepositoryData(for repo: Repo) async {
+        self.loadingMessage = "Loading repository data..."
         self.isLoading = true
         self.errorMessage = nil
         
@@ -606,6 +608,7 @@ class ViewModel {
     // MARK: - Rebase Actions
     
     func continueRebase(at repo: Repo) async {
+        self.loadingMessage = "Continuing rebase..."
         self.isLoading = true
         self.errorMessage = nil
         do {
@@ -621,6 +624,7 @@ class ViewModel {
     }
     
     func skipRebase(at repo: Repo) async {
+        self.loadingMessage = "Skipping commit..."
         self.isLoading = true
         self.errorMessage = nil
         do {
@@ -636,6 +640,7 @@ class ViewModel {
     }
     
     func abortRebase(at repo: Repo) async {
+        self.loadingMessage = "Aborting rebase..."
         self.isLoading = true
         self.errorMessage = nil
         do {
@@ -667,6 +672,7 @@ class ViewModel {
     // MARK: - Merge Actions
     
     func continueMerge(at repo: Repo) async {
+        self.loadingMessage = "Continuing merge..."
         self.isLoading = true
         self.errorMessage = nil
         do {
@@ -682,6 +688,7 @@ class ViewModel {
     }
     
     func abortMerge(at repo: Repo) async {
+        self.loadingMessage = "Aborting merge..."
         self.isLoading = true
         self.errorMessage = nil
         do {

@@ -81,13 +81,8 @@ struct ContentView: View {
                 MergeAssistantModal(repo: repo, viewModel: viewModel)
             }
         }
-        .overlay {
-            if viewModel.isLoading {
-                ZStack {
-                    Color(.gray).opacity(0.3)
-                    AQILoaderView()
-                }
-            }
+        .sheet(isPresented: $viewModel.isLoading) {
+            LoadingView(loadingMessage: viewModel.loadingMessage, isLoading: viewModel.isLoading)
         }
         .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {

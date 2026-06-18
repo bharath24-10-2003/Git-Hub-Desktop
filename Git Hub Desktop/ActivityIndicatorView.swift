@@ -11,6 +11,7 @@ import SwiftUI
 struct AQILoaderView: View {
 
     @State private var variableValue: Double = 0
+    var size: CGFloat = 48
 
     private let values: [Double] = [
         0,
@@ -24,7 +25,7 @@ struct AQILoaderView: View {
             systemName: "aqi.medium",
             variableValue: variableValue
         )
-        .font(.system(size: 96))
+        .font(.system(size: size))
         .symbolEffect(.breathe.pulse.wholeSymbol)
         .task {
             await startLoadingAnimation()
@@ -39,7 +40,7 @@ struct AQILoaderView: View {
                 }
 
                 try? await Task.sleep(
-                    for: .milliseconds(250)
+                    for: .milliseconds(50)
                 )
             }
         }
