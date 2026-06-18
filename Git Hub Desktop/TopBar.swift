@@ -60,13 +60,11 @@ struct TopBar: View {
                     ProminentBaseButton(title: "Push", image: Image(.push)) {
                         self.error = nil
                         Task {
-                            viewModel.isLoading = true
                             do {
                                 _ = try await viewModel.push(at: repo)
                             } catch {
                                 self.error = error.localizedDescription
                             }
-                            viewModel.isLoading = false
                         }
                     }
                 }

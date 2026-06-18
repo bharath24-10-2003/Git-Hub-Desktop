@@ -425,7 +425,6 @@ struct PullBranchModal: View {
     let viewModel: ViewModel
     
     @State private var error: String?
-    @State private var isLoading: Bool = false
     
     var body: some View {
         let sourceBranch = viewModel.selectedBranchForAction ?? (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
@@ -448,10 +447,6 @@ struct PullBranchModal: View {
             HStack {
                 Spacer()
                 
-                if isLoading {
-                    ProgressView()
-                }
-                
                 BaseButton(title: "Cancel") {
                     viewModel.showMergeModal = false
                 }
@@ -460,12 +455,9 @@ struct PullBranchModal: View {
                     self.error = nil
                     Task {
                         do {
-                            isLoading = true
                             try await viewModel.rebaseBranch(name: sourceBranch, at: repo)
-                            isLoading = false
                             viewModel.showMergeModal = false
                         } catch {
-                            isLoading = false
                             self.error = error.localizedDescription
                         }
                     }
@@ -475,12 +467,9 @@ struct PullBranchModal: View {
                     self.error = nil
                     Task {
                         do {
-                            isLoading = true
                             try await viewModel.mergeBranch(name: sourceBranch, at: repo)
-                            isLoading = false
                             viewModel.showMergeModal = false
                         } catch {
-                            isLoading = false
                             self.error = error.localizedDescription
                         }
                     }
