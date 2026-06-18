@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import SwiftUI
 
 @Observable
 class ViewModel {
@@ -50,6 +51,7 @@ class ViewModel {
     // MARK: - Diff State
     var selectedFileForDiff: ChangedFile? = nil
     var currentDiff: FileDiff? = nil
+    var isDiffLoading: Bool = false
     
     // MARK: - Presentation Flags
     var showCloneModal: Bool = false
@@ -192,15 +194,18 @@ class ViewModel {
     
     // MARK: - Diff
     
-    @MainActor
     func loadDiff(for file: ChangedFile, at repo: Repo) async throws {
-        self.selectedFileForDiff = file
-        self.currentDiff = nil // clear while loading
+        self.isDiffLoading = true
         
         do {
             let diff = try await service.getDiff(for: file.path, isStaged: file.isStaged, at: repo.path)
-            self.currentDiff = diff
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                self.selectedFileForDiff = file
+                self.currentDiff = diff
+                self.isDiffLoading = false
+            }
         } catch {
+            self.isDiffLoading = false
             self.errorMessage = error.localizedDescription
             throw error
         }

@@ -287,23 +287,34 @@ struct ChangesView: View {
                         // Right: Diff View
                         VStack {
                             if let selectedFile = viewModel.selectedFileForDiff {
-                                if let diff = viewModel.currentDiff {
-                                    DiffRendererView(diff: diff, file: selectedFile)
-                                        .padding()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                } else {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                ZStack {
+                                    if let diff = viewModel.currentDiff {
+                                        DiffRendererView(diff: diff, file: selectedFile)
+                                            .padding()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                            .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
+                                            .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
+                                            .id(selectedFile.id)
+                                            .transition(.asymmetric(
+                                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                                removal: .move(edge: .leading).combined(with: .opacity)
+                                            ))
+                                    }
+                                    
+                                    if viewModel.isDiffLoading {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .transition(.opacity)
+                                    }
                                 }
                             }
                         }
                         .frame(minWidth: 500)
                         .background(Color(NSColor.controlBackgroundColor))
-                        .transition(.move(edge: .trailing))
                     }
                 }
                 .id(viewModel.selectedFileForDiff == nil)
-                .animation(.easeInOut(duration: 0.3), value: viewModel.selectedFileForDiff != nil)
+                .transition(.move(edge: .trailing))
             }
         }
         .overlay {

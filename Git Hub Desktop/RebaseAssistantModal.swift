@@ -103,7 +103,7 @@ struct RebaseAssistantModal: View {
                 
                 // Right: Diff & Conflict Editor
                 VStack(spacing: 0) {
-                    if let file = selectedFile {
+                    if let file = viewModel.selectedFileForDiff {
                         selectedFileDetailPane(for: file)
                     } else {
                         VStack(spacing: 12) {
@@ -120,7 +120,8 @@ struct RebaseAssistantModal: View {
                 .frame(minWidth: 350, idealWidth: 450)
                 .background(Color(NSColor.controlBackgroundColor))
             }
-            .id(selectedFile == nil)
+            .id(viewModel.selectedFileForDiff == nil)
+            .animation(.snappy(duration: 0.38, extraBounce: 0.05), value: viewModel.selectedFileForDiff)
             .background(Color(NSColor.windowBackgroundColor))
             
             Divider()
@@ -139,6 +140,9 @@ struct RebaseAssistantModal: View {
         .frame(width: 1000, height: 700)
         .onAppear {
             editedMessage = viewModel.rebaseState.currentCommitMessage
+            selectedFile = nil
+            viewModel.selectedFileForDiff = nil
+            viewModel.currentDiff = nil
         }
         .onChange(of: viewModel.rebaseState.currentCommitMessage) { _, newValue in
             editedMessage = newValue
@@ -282,11 +286,23 @@ struct RebaseAssistantModal: View {
             Divider()
             
             // Diff Content
-            if let diff = viewModel.currentDiff {
-                DiffRendererView(diff: diff, file: file)
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                if let diff = viewModel.currentDiff {
+                    DiffRendererView(diff: diff, file: file)
+                        .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
+                        .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
+                        .id(file.id + "_" + (file.isStaged ? "staged" : "unstaged"))
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
+                }
+                
+                if viewModel.isDiffLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity)
+                }
             }
         }
     }

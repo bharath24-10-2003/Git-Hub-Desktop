@@ -16,8 +16,10 @@ struct CommitDiffDetailView: View {
     
     @State private var changedFiles: [ChangedFile] = []
     @State private var selectedFileForDiff: ChangedFile? = nil
+    @State private var activeSelectedFileId: String? = nil
     @State private var currentDiff: FileDiff? = nil
     @State private var isLoading: Bool = true
+    @State private var isDiffLoading: Bool = false
     @State private var error: String? = nil
     
     var body: some View {
@@ -66,9 +68,10 @@ struct CommitDiffDetailView: View {
                             ForEach(changedFiles) { file in
                                 CommitFileRowView(
                                     file: file,
-                                    isSelected: selectedFileForDiff?.id == file.id
+                                    isSelected: activeSelectedFileId == file.id
                                 )
                                 .onTapGesture {
+                                    activeSelectedFileId = file.id
                                     loadDiff(for: file)
                                 }
                                 
@@ -84,13 +87,26 @@ struct CommitDiffDetailView: View {
                     if selectedFileForDiff != nil {
                         VStack {
                             if let selectedFile = selectedFileForDiff {
-                                if let diff = currentDiff {
-                                    DiffRendererView(diff: diff, file: selectedFile)
-                                        .padding()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                } else {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                ZStack {
+                                    if let diff = currentDiff {
+                                        DiffRendererView(diff: diff, file: selectedFile)
+                                            .padding()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                            .opacity(isDiffLoading ? 0.45 : 1.0)
+                                            .blur(radius: isDiffLoading ? 0.8 : 0)
+                                            .id(selectedFile.id)
+                                            .transition(.asymmetric(
+                                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                                removal: .move(edge: .leading).combined(with: .opacity)
+                                            ))
+
+                                    }
+                                    
+                                    if isDiffLoading {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .transition(.opacity)
+                                    }
                                 }
                             } else {
                                 NoStashView()
@@ -124,17 +140,21 @@ struct CommitDiffDetailView: View {
     }
     
     private func loadDiff(for file: ChangedFile) {
-        selectedFileForDiff = file
-        currentDiff = nil
+        isDiffLoading = true
         
         Task {
             do {
                 let diff = try await viewModel.loadCommitDiff(hash: hash, file: file.path, at: repo)
-                if selectedFileForDiff?.id == file.id {
-                    currentDiff = diff
+                if activeSelectedFileId == file.id {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                        selectedFileForDiff = file
+                        currentDiff = diff
+                        isDiffLoading = false
+                    }
                 }
             } catch {
                 self.error = error.localizedDescription
+                isDiffLoading = false
             }
         }
     }
