@@ -10,7 +10,9 @@ import SwiftUI
 struct StashesView: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
+    
     @State var error: String? = nil
     @State var selectedStash: GitStash? = nil
     @State var height: CGFloat = 0
@@ -229,5 +231,5 @@ struct NoStashView : View {
 }
 
 #Preview {
-    StashesView(repo: Repo(name: "tvOS-App", path: "/Users/bharath/Documents/Projects/tvOS-App", currentBranch: "develop"), viewModel: ViewModel())
+    StashesView(repo: Repo(name: "tvOS-App", path: "/Users/bharath/Documents/Projects/tvOS-App", currentBranch: "develop"), viewModel: MainViewModel(), coordinator: AppCoordinator())
 }

@@ -10,13 +10,13 @@ import SwiftUI
 struct ChangesView: View {
 
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
 
     @State private var commitMessage: String = ""
     @State private var selectedFiles = Set<String>()
     @State private var error: String?
     @State private var stashMessage: String?
-    @State private var isStashPresented: Bool = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -55,11 +55,8 @@ struct ChangesView: View {
                 }
             }
         }
-        .sheet(isPresented: $isStashPresented) {
-            stashModal(viewModel: viewModel, repo: repo, onDismiss: {
-                isStashPresented = false
-            })
-            .padding()
+        .task {
+            await viewModel.loadRepositoryData(for: repo)
         }
     }
     
@@ -130,7 +127,7 @@ struct ChangesView: View {
             }
             Spacer()
             SmallProminentButton(title: "Open Rebase Assistant") {
-                viewModel.showRebaseModal = true
+                coordinator.presentRebaseAssistant(for: repo)
             }
         }
         .padding()
@@ -158,7 +155,7 @@ struct ChangesView: View {
             }
             Spacer()
             SmallProminentButton(title: "Open Merge Assistant") {
-                viewModel.showMergeAssistantModal = true
+                coordinator.presentMergeAssistant(for: repo)
             }
         }
         .padding()
@@ -217,7 +214,7 @@ struct ChangesView: View {
                         .font(.headline)
                     Spacer()
                     SmallButton(title: "Stash") {
-                        isStashPresented = true
+                        coordinator.presentStash(for: repo)
                     }
                     SmallButton(title: "Stage All") {
                         self.error = nil
@@ -417,7 +414,7 @@ struct TitleView: View {
 }
 #Preview {
     let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
-    ChangesView(repo: repo, viewModel: ViewModel())
+    ChangesView(repo: repo, viewModel: MainViewModel(), coordinator: AppCoordinator())
         .frame(width: 500)
         .overlay {
             RoundedRectangle(cornerRadius: 20)
@@ -429,7 +426,7 @@ struct TitleView: View {
 struct ChangedFileRowView: View {
     let file: ChangedFile
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
     let isSelected: Bool
     let isViewingDiff: Bool
     @Binding var error: String?

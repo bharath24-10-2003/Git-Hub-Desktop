@@ -9,7 +9,8 @@ import SwiftUI
 
 struct MergeAssistantModal: View {
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var selectedFile: ChangedFile? = nil
     @State private var editedMessage: String = ""
@@ -30,7 +31,7 @@ struct MergeAssistantModal: View {
                     }
                     Spacer()
                     Button(action: {
-                        viewModel.showMergeAssistantModal = false
+                        coordinator.dismissSheet()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)

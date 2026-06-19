@@ -10,8 +10,9 @@ import SwiftUI
 struct BranchesView: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
     @Binding var selectedSection: RepoSection
+    let coordinator: AppCoordinator
     
     @State var searchLocalBranch: String = ""
     @State var searchRemoteBranch: String = ""
@@ -57,13 +58,13 @@ struct BranchesView: View {
                     }
                     BaseButton(title: "Merge/Rebase Branch") {
                         viewModel.selectedBranchForAction = selected
-                        viewModel.showMergeModal = true
+                        coordinator.presentPullBranch(for: repo)
                     }
                 }
                 
                 ProminentBaseButton(title: "New Branch", image: Image(.plus)) {
                     viewModel.selectedBranchForAction = selectedBranch
-                    viewModel.showNewBranchModal = true
+                    coordinator.presentNewBranch(for: repo)
                 }
                 .padding()
             }
@@ -106,7 +107,7 @@ struct BranchesView: View {
                                     Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = false
-                                        viewModel.showRenameBranchModal = true
+                                        coordinator.renameBranch(for: repo)
                                     } label: {
                                         HStack {
                                             Image(systemName: "pencil.line")
@@ -128,7 +129,7 @@ struct BranchesView: View {
                                     Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = false
-                                        viewModel.showDeleteBranchModal = true
+                                        coordinator.presentDeleteBranch(for: repo)
                                     } label: {
                                         HStack {
                                             Image(systemName: "trash")
@@ -183,7 +184,7 @@ struct BranchesView: View {
                                     Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = true
-                                        viewModel.showRenameBranchModal = true
+                                        coordinator.renameBranch(for: repo)
                                     } label: {
                                         HStack {
                                             Image(systemName: "pencil.line")
@@ -205,7 +206,7 @@ struct BranchesView: View {
                                     Button {
                                         viewModel.selectedBranchForAction = branch
                                         viewModel.isRemoteBranchAction = true
-                                        viewModel.showDeleteBranchModal = true
+                                        coordinator.presentDeleteBranch(for: repo)
                                     } label: {
                                         HStack {
                                             Image(systemName: "trash")
@@ -301,9 +302,4 @@ struct BranchText: View {
             }
         }
     }
-}
-#Preview {
-    @Previewable @State var text: String = ""
-    CustomSearchBar(text: $text, placeholder: "Search Branch")
-        .padding()
 }

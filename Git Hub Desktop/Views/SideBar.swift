@@ -13,7 +13,8 @@ struct Sidebar: View {
     @Binding var selectedSection: RepoSection
     
     let repos: [Repo]
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     var body: some View {
         
@@ -66,7 +67,7 @@ struct Sidebar: View {
                     .padding(.vertical, 4)
                 
                 Button {
-                    viewModel.showCloneModal = true
+                    coordinator.presentClone()
                 } label: {
                     HStack {
                         Image(systemName: "plus.square.dashed")
@@ -83,7 +84,7 @@ struct Sidebar: View {
                 .padding(.top, 4)
                 
                 Button {
-                    viewModel.showAddRepoModal = true
+                    coordinator.presentAddRepo()
                 } label: {
                     HStack {
                         Image(systemName: "folder.badge.plus")
@@ -151,6 +152,7 @@ struct Sidebar: View {
         selectedRepo: .constant(nil),
         selectedSection: .constant(.changes),
         repos: [],
-        viewModel: ViewModel()
+        viewModel: MainViewModel(),
+        coordinator: AppCoordinator()
     )
 }

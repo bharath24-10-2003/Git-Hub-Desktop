@@ -10,7 +10,8 @@ import SwiftUI
 struct TopBar: View {
 
     let repo: Repo?
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var error: String?
 
@@ -81,10 +82,10 @@ struct TopBar: View {
                     .font(Font.system(size: 18, weight: .semibold))
                 Spacer()
                 BaseButton(title: "Clone a Repo") {
-                    viewModel.showCloneModal = true
+                    coordinator.presentClone()
                 }
                 BaseButton(title: "Add Local Repo") {
-                    viewModel.showAddRepoModal = true
+                    coordinator.presentAddRepo()
                 }
             }
         }

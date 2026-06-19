@@ -11,7 +11,7 @@ struct CommitDiffDetailView: View {
     let hash: String
     let title: String
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
     var onBack: (() -> Void)? = nil
     
     @State private var changedFiles: [ChangedFile] = []

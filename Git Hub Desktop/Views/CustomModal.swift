@@ -9,7 +9,8 @@ import SwiftUI
 
 struct CloneModal: View {
     
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var url: String = ""
     @State private var path: String = ""
@@ -65,14 +66,14 @@ struct CloneModal: View {
                 HStack (alignment:.center) {
                     Spacer()
                     BaseButton(title: "Close") {
-                        viewModel.showCloneModal = false
+                        coordinator.dismissSheet()
                     }
                     ProminentBaseButton(title: "Clone Repository") {
                         guard !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         self.error = nil
                         Task {
                             await viewModel.cloneRepo(url: url, destinationPath: path)
-                            viewModel.showCloneModal = false
+                            coordinator.dismissSheet()
                         }
                     }
                 }
@@ -86,7 +87,7 @@ struct CloneModal: View {
 
 struct stashModal: View {
     
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
     let repo: Repo
     
     @State private var error: String?
@@ -144,7 +145,8 @@ struct stashModal: View {
 
 struct AddRepoModal: View {
     
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var path: String = ""
     
@@ -175,12 +177,12 @@ struct AddRepoModal: View {
             HStack (alignment:.center) {
                 Spacer()
                 BaseButton(title: "Close") {
-                    viewModel.showAddRepoModal = false
+                    coordinator.dismissSheet()
                 }
                 ProminentBaseButton(title: "Add Repository") {
                     guard !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     viewModel.addExistingRepo(name: "", path: path)
-                    viewModel.showAddRepoModal = false
+                    coordinator.dismissSheet()
                 }
             }
             .padding(.top, 10)
@@ -258,6 +260,7 @@ struct BaseButton: View {
         .tint(.white)
     }
 }
+
 struct ProminentBaseButton: View{
     
     var title: String
@@ -313,8 +316,6 @@ struct ModalDescription: View {
     }
 }
 
-// MARK: - Reusable Error Banner
-
 struct ErrorBannerView: View {
     
     let message: String
@@ -358,7 +359,8 @@ struct ErrorBannerView: View {
 struct NewBranchModal: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var branchName: String = ""
     @State private var error: String?
@@ -394,7 +396,7 @@ struct NewBranchModal: View {
             HStack {
                 Spacer()
                 BaseButton(title: "Cancel") {
-                    viewModel.showNewBranchModal = false
+                    coordinator.dismissSheet()
                 }
                 ProminentBaseButton(title: "Create Branch") {
                     guard !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -402,7 +404,7 @@ struct NewBranchModal: View {
                     Task {
                         do {
                             _ = try await viewModel.createBranch(name: branchName, from: sourceBranch, at: repo)
-                            viewModel.showNewBranchModal = false
+                            coordinator.dismissSheet()
                         } catch {
                             self.error = error.localizedDescription
                         }
@@ -422,7 +424,8 @@ struct NewBranchModal: View {
 struct PullBranchModal: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var error: String?
     
@@ -448,7 +451,7 @@ struct PullBranchModal: View {
                 Spacer()
                 
                 BaseButton(title: "Cancel") {
-                    viewModel.showMergeModal = false
+                    coordinator.dismissSheet()
                 }
                 
                 BaseButton(title: "Rebase") {
@@ -456,7 +459,7 @@ struct PullBranchModal: View {
                     Task {
                         do {
                             try await viewModel.rebaseBranch(name: sourceBranch, at: repo)
-                            viewModel.showMergeModal = false
+                            coordinator.dismissSheet()
                         } catch {
                             self.error = error.localizedDescription
                         }
@@ -468,7 +471,7 @@ struct PullBranchModal: View {
                     Task {
                         do {
                             try await viewModel.mergeBranch(name: sourceBranch, at: repo)
-                            viewModel.showMergeModal = false
+                            coordinator.dismissSheet()
                         } catch {
                             self.error = error.localizedDescription
                         }
@@ -485,14 +488,11 @@ struct PullBranchModal: View {
     }
 }
 
-#Preview {
-    PullBranchModal(repo: Repo(name: "Bharath", path: "usr/local", currentBranch: "main"), viewModel: ViewModel())
-}
-
 struct DeleteBranchModal: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     @State private var isDeleting: Bool = false
     
     @State private var error: String?
@@ -527,7 +527,7 @@ struct DeleteBranchModal: View {
                     ProgressView()
                 }
                 BaseButton(title: "Cancel") {
-                    viewModel.showDeleteBranchModal = false
+                    coordinator.dismissSheet()
                 }
                 
                 ProminentBaseButton(title: "Delete", textTint: .white) {
@@ -536,7 +536,7 @@ struct DeleteBranchModal: View {
                         isDeleting = true
                         do {
                             _ = try await viewModel.deleteBranch(branch: branchToDelete, force: forceDelete, isRemote: viewModel.isRemoteBranchAction, at: repo)
-                            viewModel.showDeleteBranchModal = false
+                            coordinator.dismissSheet()
                         } catch {
                             self.error = error.localizedDescription
                         }
@@ -558,7 +558,8 @@ struct DeleteBranchModal: View {
 struct RenameBranchModal: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var newBranchName: String = ""
     @State private var error: String?
@@ -585,7 +586,7 @@ struct RenameBranchModal: View {
                 Spacer()
                 
                 BaseButton(title: "Cancel") {
-                    viewModel.showRenameBranchModal = false
+                    coordinator.dismissSheet()
                 }
                 
                 ProminentBaseButton(title: "Rename", textTint: .white) {
@@ -594,7 +595,7 @@ struct RenameBranchModal: View {
                     Task {
                         do {
                             _ = try await viewModel.renameBranch(oldName: oldName, newName: newBranchName, isRemote: viewModel.isRemoteBranchAction, at: repo)
-                            viewModel.showRenameBranchModal = false
+                            coordinator.dismissSheet()
                         } catch {
                             self.error = error.localizedDescription
                         }
@@ -608,5 +609,52 @@ struct RenameBranchModal: View {
         .onDisappear {
             viewModel.selectedBranchForAction = nil
         }
+    }
+}
+
+struct HistoryCherryPickModal: View {
+    let viewModel: MainViewModel
+    let repo: Repo
+    let coordinator: AppCoordinator
+    
+    @State private var cherryPickHash: String = ""
+    @State private var cherryPickError: String? = nil
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ModalDescription(title: "Cherry Pick", description: "Enter the commit hash")
+                .padding()
+            
+            if let cherryPickError {
+                ErrorBannerView(message: cherryPickError) {
+                    self.cherryPickError = nil
+                }
+                .padding(.horizontal)
+            }
+            
+            Divider()
+            CustomTextField(url: $cherryPickHash, imageName: "number", placeholder: "Enter the commit hash")
+                .padding(.horizontal)
+            Divider()
+            HStack {
+                BaseButton(title: "Cherry Pick") {
+                    self.cherryPickError = nil
+                    Task {
+                        do {
+                            _ = try await viewModel.cherryPickCommit(cherryPickHash, at: repo)
+                            coordinator.dismissSheet()
+                        } catch {
+                            self.cherryPickError = error.localizedDescription
+                        }
+                    }
+                }
+                .padding(.trailing, 24)
+                BaseButton(title: "Close") {
+                    coordinator.dismissSheet()
+                }
+            }
+            .padding()
+        }
+        .frame(width: 500)
     }
 }
