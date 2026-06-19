@@ -26,18 +26,39 @@ struct TopBar: View {
                     Text("/")
                         .font(Font.system(size: 14, weight: .light))
                         .opacity(0.5)
-                    HStack {
-                        Image(systemName: "arrow.trianglehead.branch")
-                        Text(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
+                    Menu {
+                        ForEach(viewModel.localBranches, id: \.self) { branch in
+                            Button {
+                                Task {
+                                    do {
+                                        try await viewModel.checkout(branch: branch, at: repo)
+                                    } catch {
+                                        self.error = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(branch)
+                                    if branch == (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch) {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.trianglehead.branch")
+                            Text(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
+                        }
+                        .background {
+                            RoundedRectangle(cornerRadius: 10)
+                                .frame(height: 28)
+                                .padding(-8)
+                                .tint(.gray)
+                                .opacity(0.2)
+                        }
+                        .padding(8)
                     }
-                    .background {
-                        RoundedRectangle(cornerRadius: 10)
-                            .frame(height: 28)
-                            .padding(-8)
-                            .tint(.gray)
-                            .opacity(0.2)
-                    }
-                    .padding(8)
                     Spacer()
                     
                     BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {

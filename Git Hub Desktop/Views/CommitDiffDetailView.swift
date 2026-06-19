@@ -94,6 +94,7 @@ struct CommitDiffDetailView: View {
                                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                             .opacity(isDiffLoading ? 0.45 : 1.0)
                                             .blur(radius: isDiffLoading ? 0.8 : 0)
+                                            .animation(.easeInOut, value: isDiffLoading)
                                             .id(selectedFile.id)
                                             .transition(.asymmetric(
                                                 insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -114,10 +115,9 @@ struct CommitDiffDetailView: View {
                         }
                         .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color(NSColor.controlBackgroundColor))
-                        .transition(.move(edge: .trailing))
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
-                .id(selectedFileForDiff == nil)
             }
         }
         .background(Color(NSColor.windowBackgroundColor))

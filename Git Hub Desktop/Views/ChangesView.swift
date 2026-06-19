@@ -291,6 +291,7 @@ struct ChangesView: View {
                                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                             .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
                                             .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
+                                            .animation(.easeInOut, value: viewModel.isDiffLoading)
                                             .id(selectedFile.id)
                                             .transition(.asymmetric(
                                                 insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -308,10 +309,9 @@ struct ChangesView: View {
                         }
                         .frame(minWidth: 500)
                         .background(Color(NSColor.controlBackgroundColor))
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
-                .id(viewModel.selectedFileForDiff == nil)
-                .transition(.move(edge: .trailing))
             }
         }
         .overlay {
