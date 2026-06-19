@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
 
     @Bindable var coordinator: AppCoordinator
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationSplitView {
@@ -102,6 +103,15 @@ struct ContentView: View {
         .onChange(of: coordinator.viewModel.mergeState.inProgress) { _, newValue in
             if !newValue, let repo = coordinator.selectedRepo, coordinator.activeSheet == .mergeAssistant(repo) {
                 coordinator.dismissSheet()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                if let repo = coordinator.selectedRepo {
+                    Task {
+                        await coordinator.viewModel.loadRepositoryData(for: repo)
+                    }
+                }
             }
         }
     }
