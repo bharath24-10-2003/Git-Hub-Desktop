@@ -96,11 +96,17 @@ struct HistoryCommitView: View {
                     Text(commit.message)
                         .font(Font.system(size: 14,weight: .semibold))
                     HStack {
-                        VStack(alignment: .leading) {
-                            Text (commit.displayDate)
-                                .font(Font.system(size: 11,weight: .regular))
-                            Text(commit.displayTime)
-                                .font(Font.system(size: 11,weight: .regular))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(commit.timeAgo)
+                                .font(Font.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 4) {
+                                Text(commit.displayDate)
+                                Text("•")
+                                Text(commit.displayTime)
+                            }
+                            .font(Font.system(size: 10, weight: .regular))
+                            .foregroundStyle(.tertiary)
                         }
                         .padding(.trailing, 24)
                         Button {

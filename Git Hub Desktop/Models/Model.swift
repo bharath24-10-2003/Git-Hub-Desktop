@@ -129,6 +129,13 @@ struct Commit: Identifiable, Hashable, Sendable {
         
         return formatter.string(from: parsedDate)
     }
+    
+    var timeAgo: String {
+        guard let parsedDate else { return "" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: parsedDate, relativeTo: Date())
+    }
 }
 
 extension Commit {
