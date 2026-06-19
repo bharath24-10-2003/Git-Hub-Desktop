@@ -14,6 +14,8 @@ struct TopBar: View {
     let coordinator: AppCoordinator
     
     @State private var error: String?
+    @State private var showForcePushAlert = false
+    @State private var pushErrorMessage = ""
 
     var body: some View {
         if let repo = repo {
@@ -64,7 +66,8 @@ struct TopBar: View {
                             do {
                                 _ = try await viewModel.push(at: repo)
                             } catch {
-                                self.error = error.localizedDescription
+                                self.pushErrorMessage = error.localizedDescription
+                                self.showForcePushAlert = true
                             }
                         }
                     }
@@ -75,6 +78,26 @@ struct TopBar: View {
                         self.error = nil
                     }
                 }
+            }
+            .alert(
+                "Push Failed",
+                isPresented: $showForcePushAlert
+            ) {
+                Button("Force Push", role: .destructive) {
+                    self.error = nil
+                    Task {
+                        do {
+                            _ = try await viewModel.forcePush(at: repo)
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    self.error = pushErrorMessage
+                }
+            } message: {
+                Text("\(pushErrorMessage)\n\nWould you like to force push to overwrite the remote branch?")
             }
         } else {
             HStack (alignment: .center){

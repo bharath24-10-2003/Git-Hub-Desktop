@@ -447,6 +447,19 @@ class MainViewModel {
     }
     
     @discardableResult
+    func forcePush(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Force pushing commits..."
+        self.isLoading = true
+        defer { self.isLoading = false }
+        let result = try await service.forcePush(at: repo.path)
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
+    }
+    
+    @discardableResult
     func checkout(branch: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Checking out branch..."
         self.isLoading = true
