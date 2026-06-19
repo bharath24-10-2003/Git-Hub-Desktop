@@ -40,7 +40,7 @@ struct AQILoaderView: View {
                 }
 
                 try? await Task.sleep(
-                    for: .milliseconds(50)
+                    for: .milliseconds(250)
                 )
             }
         }

@@ -436,7 +436,7 @@ struct ChangedFileRowView: View {
         HStack(spacing: 0) {
             // Left Accent Strip
             RoundedRectangle(cornerRadius: 2)
-                .fill(file.isStaged ? Color.blue : Color.red)
+                .fill(file.isStaged ? Color.green : Color.red)
                 .frame(width: 4)
                 .padding(.vertical, 6)
                 .padding(.leading, 6)
@@ -455,7 +455,7 @@ struct ChangedFileRowView: View {
                         
                         Text(file.isStaged ? "● Staged" : "○ Unstaged")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(file.isStaged ? Color.blue : Color.red)
+                            .foregroundStyle(file.isStaged ? Color.green : Color.red)
                     }
                 }
                 Spacer()
@@ -506,8 +506,8 @@ struct ChangedFileRowView: View {
         .contentShape(Rectangle())
         .background(
             isViewingDiff
-            ? (file.isStaged ? Color.blue.opacity(0.18) : Color.red.opacity(0.18))
-            : (file.isStaged ? Color.blue.opacity(0.08) : Color.red.opacity(0.06))
+            ? (file.isStaged ? Color.green.opacity(0.18) : Color.red.opacity(0.18))
+            : (file.isStaged ? Color.green.opacity(0.08) : Color.red.opacity(0.06))
         )
         .onTapGesture {
             Task {
