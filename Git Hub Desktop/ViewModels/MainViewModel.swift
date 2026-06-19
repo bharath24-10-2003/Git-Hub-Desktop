@@ -137,12 +137,15 @@ class MainViewModel {
             let rebaseState = await service.getRebaseState(at: path)
             let mergeState = await service.getMergeState(at: path)
             
+            let unpushedCount = await service.getUnpushedCommits(branch: detectedCurrentBranch, at: path).count
+            
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
             self.currentBranch = detectedCurrentBranch
             self.isCherryPicking = isCherryPickInProgress
             self.rebaseState = rebaseState
             self.mergeState = mergeState
+            self.unPushedCommits = unpushedCount
         } catch {
             self.errorMessage = error.localizedDescription
             print("Failed to load repo core data:", error)
