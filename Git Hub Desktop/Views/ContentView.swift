@@ -15,7 +15,7 @@ struct ContentView: View {
         NavigationSplitView {
             Sidebar(
                 selectedRepo: $coordinator.selectedRepo,
-                selectedSection: $coordinator.selectedSection,
+                selectedSection: $coordinator.viewModel.activeSection,
                 repos: coordinator.viewModel.store.repos,
                 viewModel: coordinator.viewModel,
                 coordinator: coordinator
@@ -33,7 +33,7 @@ struct ContentView: View {
 
                 BodyView(
                     repo: coordinator.selectedRepo,
-                    section: $coordinator.selectedSection,
+                    section: $coordinator.viewModel.activeSection,
                     viewModel: coordinator.viewModel,
                     coordinator: coordinator
                 )
@@ -72,7 +72,7 @@ struct ContentView: View {
         .dialogIcon(Image(.branch))
         .onChange(of: coordinator.selectedRepo) {
             coordinator.viewModel.historyBranch = nil
-            coordinator.selectedSection = .changes
+            coordinator.viewModel.activeSection = .changes
             if let repo = coordinator.selectedRepo {
                 Task {
                     await coordinator.viewModel.loadRepositoryData(for: repo)

@@ -39,7 +39,6 @@ enum AppSheet: Identifiable, Equatable {
 @Observable
 final class AppCoordinator {
     var selectedRepo: Repo? = nil
-    var selectedSection: RepoSection = .changes
     var activeSheet: AppSheet? = nil
     
     var viewModel: MainViewModel
