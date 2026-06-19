@@ -71,13 +71,18 @@ struct ContentView: View {
                 RenameBranchModal(repo: repo, viewModel: viewModel)
             }
         }
-        .overlay {
-            if viewModel.isLoading {
-                ZStack {
-                    Color(.gray).opacity(0.3)
-                    AQILoaderView()
-                }
+        .sheet(isPresented: $viewModel.showRebaseModal) {
+            if let repo = viewModel.selectedRepo {
+                RebaseAssistantModal(repo: repo, viewModel: viewModel)
             }
+        }
+        .sheet(isPresented: $viewModel.showMergeAssistantModal) {
+            if let repo = viewModel.selectedRepo {
+                MergeAssistantModal(repo: repo, viewModel: viewModel)
+            }
+        }
+        .sheet(isPresented: $viewModel.isLoading) {
+            LoadingView(loadingMessage: viewModel.loadingMessage, isLoading: viewModel.isLoading)
         }
         .dialogIcon(Image(.branch))
         .onChange(of: viewModel.selectedRepo) {

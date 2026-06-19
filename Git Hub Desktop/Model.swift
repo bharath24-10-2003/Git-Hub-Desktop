@@ -183,3 +183,21 @@ struct ChangedFile: Identifiable, Hashable {
     let status: String // e.g., "Modified", "Added", "Deleted", "Untracked"
     let isStaged: Bool
 }
+
+struct RebaseState: Codable, Equatable {
+    var inProgress: Bool
+    var currentCommitHash: String
+    var currentCommitMessage: String
+    var currentProgress: Int
+    var totalProgress: Int
+    var ontoBranch: String
+    var headName: String
+}
+
+struct MergeState: Codable, Equatable {
+    var inProgress: Bool
+    var sourceBranch: String
+    var targetBranch: String
+    var currentCommitHash: String
+    var defaultCommitMessage: String
+}

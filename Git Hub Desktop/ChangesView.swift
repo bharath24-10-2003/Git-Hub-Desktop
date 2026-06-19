@@ -20,6 +20,14 @@ struct ChangesView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            if viewModel.rebaseState.inProgress {
+                rebaseWarningSection
+                    .padding(.top, 16)
+            }
+            if viewModel.mergeState.inProgress {
+                mergeWarningSection
+                    .padding(.top, 16)
+            }
             if viewModel.isCherryPicking {
                 if let error {
                     ErrorBannerView(message: error) {
@@ -95,6 +103,62 @@ struct ChangesView: View {
                         self.error = error.localizedDescription
                     }
                 }
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+    
+    var rebaseWarningSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Rebase in Progress")
+                        .font(.headline)
+                }
+                Text("This repository is currently in a rebasing state. Click the assistant button to resolve conflicts and continue.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            SmallProminentButton(title: "Open Rebase Assistant") {
+                viewModel.showRebaseModal = true
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+    
+    var mergeWarningSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Merge in Progress")
+                        .font(.headline)
+                }
+                Text("This repository is currently in a merging state. Click the assistant button to resolve conflicts and continue.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            SmallProminentButton(title: "Open Merge Assistant") {
+                viewModel.showMergeAssistantModal = true
             }
         }
         .padding()
@@ -217,28 +281,40 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 200, idealWidth: 300)
+                    .frame(minWidth: 400)
                     
                     if viewModel.selectedFileForDiff != nil {
                         // Right: Diff View
                         VStack {
                             if let selectedFile = viewModel.selectedFileForDiff {
-                                if let diff = viewModel.currentDiff {
-                                    DiffRendererView(diff: diff, file: selectedFile)
-                                        .padding()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                } else {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                ZStack {
+                                    if let diff = viewModel.currentDiff {
+                                        DiffRendererView(diff: diff, file: selectedFile)
+                                            .padding()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                            .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
+                                            .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
+                                            .id(selectedFile.id)
+                                            .transition(.asymmetric(
+                                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                                removal: .move(edge: .leading).combined(with: .opacity)
+                                            ))
+                                    }
+                                    
+                                    if viewModel.isDiffLoading {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .transition(.opacity)
+                                    }
                                 }
                             }
                         }
-                        .frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(minWidth: 500)
                         .background(Color(NSColor.controlBackgroundColor))
-                        .transition(.move(edge: .trailing))
                     }
                 }
-                .animation(.easeInOut(duration: 0.3), value: viewModel.selectedFileForDiff != nil)
+                .id(viewModel.selectedFileForDiff == nil)
+                .transition(.move(edge: .trailing))
             }
         }
         .overlay {
@@ -360,63 +436,82 @@ struct ChangedFileRowView: View {
     let toggleSelection: () -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "doc.text")
-                .foregroundStyle(statusColor(for: file.status))
+        HStack(spacing: 0) {
+            // Left Accent Strip
+            RoundedRectangle(cornerRadius: 2)
+                .fill(file.isStaged ? Color.blue : Color.red)
+                .frame(width: 4)
+                .padding(.vertical, 6)
+                .padding(.leading, 6)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                    .font(.system(size: 13, weight: .medium))
-                Text(file.status + (file.isStaged ? " (Staged)" : " (Unstaged)"))
-                    .font(.caption)
-                    .foregroundStyle(statusColor(for: file.status).opacity(0.8))
-            }
-            Spacer()
-            
-            if file.isStaged {
-                SmallButton(title: "Unstage") {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.text")
+                    .foregroundStyle(statusColor(for: file.status))
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 6) {
+                        Text(file.status)
+                            .font(.caption)
+                            .foregroundStyle(statusColor(for: file.status).opacity(0.8))
+                        
+                        Text(file.isStaged ? "● Staged" : "○ Unstaged")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(file.isStaged ? Color.blue : Color.red)
+                    }
+                }
+                Spacer()
+                
+                if file.isStaged {
+                    SmallButton(title: "Unstage") {
+                        Task {
+                            do {
+                                _ = try await viewModel.unstage(file: file.path, at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
+                            }
+                        }
+                    }
+                } else {
+                    SmallButton(title: "Stage", tint: .blue) {
+                        Task {
+                            do {
+                                _ = try await viewModel.stage(file: file.path, at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
+                            }
+                        }
+                    }
+                }
+                
+                SmallButton(title: "Discard", tint: .red) {
                     Task {
                         do {
-                            _ = try await viewModel.unstage(file: file.path, at: repo)
+                            _ = try await viewModel.discardChange(for: file, at: repo)
                         } catch {
                             self.error = error.localizedDescription
                         }
                     }
                 }
-            } else {
-                SmallButton(title: "Stage", tint: .blue) {
-                    Task {
-                        do {
-                            _ = try await viewModel.stage(file: file.path, at: repo)
-                        } catch {
-                            self.error = error.localizedDescription
-                        }
+                
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .foregroundStyle(isSelected ? .blue : .secondary)
+                    .font(Font.system(size: 16))
+                    .padding(4)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        toggleSelection()
                     }
-                }
             }
-            
-            SmallButton(title: "Discard", tint: .red) {
-                Task {
-                    do {
-                        _ = try await viewModel.discardChange(for: file, at: repo)
-                    } catch {
-                        self.error = error.localizedDescription
-                    }
-                }
-            }
-            
-            Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                .foregroundStyle(isSelected ? .blue : .secondary)
-                .font(Font.system(size: 16))
-                .padding(4)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    toggleSelection()
-                }
+            .padding()
         }
-        .padding()
         .contentShape(Rectangle())
-        .background(isViewingDiff ? Color.blue.opacity(0.1) : Color.clear)
+        .background(
+            isViewingDiff
+            ? (file.isStaged ? Color.blue.opacity(0.18) : Color.red.opacity(0.18))
+            : (file.isStaged ? Color.blue.opacity(0.08) : Color.red.opacity(0.06))
+        )
         .onTapGesture {
             Task {
                 try? await viewModel.loadDiff(for: file, at: repo)

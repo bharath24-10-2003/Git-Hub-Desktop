@@ -43,6 +43,7 @@ nonisolated final class GitService {
         
         var env = ProcessInfo.processInfo.environment
         env["GIT_TERMINAL_PROMPT"] = "0"
+        env["GIT_EDITOR"] = "true"
         process.environment = env
         
         if let repoPath = repoPath {
@@ -155,6 +156,16 @@ nonisolated extension GitService {
         } else {
             return try await run(["pull", "origin", branch], at: repo)
         }
+    }
+    
+    @discardableResult
+    func merge(branch: String, at repo: String) async throws -> GitResult {
+        try await run(["merge", branch], at: repo)
+    }
+    
+    @discardableResult
+    func rebase(branch: String, at repo: String) async throws -> GitResult {
+        try await run(["rebase", branch], at: repo)
     }
     // Log
     func log(branch: String? = nil, at repo: String) async throws -> [Commit] {
@@ -530,6 +541,9 @@ nonisolated extension GitService {
             }
             
             switch (indexStatus, worktreeStatus) {
+            case ("U", _), (_, "U"), ("A", "A"), ("D", "D"):
+                status = "Conflicted"
+                isStaged = false
             case ("?", "?"):
                 status = "Untracked"
             case ("A", _):
@@ -618,5 +632,174 @@ nonisolated extension GitService {
         } else {
             return try await run(["restore", file.path], at: repo)
         }
+    }
+    
+    // MARK: - Rebase Assistant helpers
+    
+    func getRebaseState(at repo: String) async -> RebaseState {
+        let fileManager = FileManager.default
+        let gitDir = (repo as NSString).appendingPathComponent(".git")
+        
+        let rebaseMergeDir = (gitDir as NSString).appendingPathComponent("rebase-merge")
+        let rebaseApplyDir = (gitDir as NSString).appendingPathComponent("rebase-apply")
+        
+        let isMerge = fileManager.fileExists(atPath: rebaseMergeDir)
+        let isApply = fileManager.fileExists(atPath: rebaseApplyDir)
+        
+        guard isMerge || isApply else {
+            return RebaseState(
+                inProgress: false,
+                currentCommitHash: "",
+                currentCommitMessage: "",
+                currentProgress: 0,
+                totalProgress: 0,
+                ontoBranch: "",
+                headName: ""
+            )
+        }
+        
+        let rebaseDir = isMerge ? rebaseMergeDir : rebaseApplyDir
+        
+        func readFile(_ name: String) -> String {
+            let path = (rebaseDir as NSString).appendingPathComponent(name)
+            guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
+                return ""
+            }
+            return content.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        let msgnum = Int(readFile("msgnum")) ?? 0
+        let end = Int(readFile("end")) ?? 0
+        let onto = readFile("onto")
+        let headName = readFile("head-name")
+        let stoppedSha = readFile("stopped-sha")
+        
+        var commitMsg = ""
+        if !stoppedSha.isEmpty {
+            let result = try? await run(["log", "--format=%s", "-n", "1", stoppedSha], at: repo)
+            if let output = result?.output, !output.isEmpty {
+                commitMsg = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        
+        return RebaseState(
+            inProgress: true,
+            currentCommitHash: stoppedSha,
+            currentCommitMessage: commitMsg,
+            currentProgress: msgnum,
+            totalProgress: end,
+            ontoBranch: onto,
+            headName: headName
+        )
+    }
+    
+    func setRebaseMessage(_ message: String, at repo: String) throws {
+        let fileManager = FileManager.default
+        let gitDir = (repo as NSString).appendingPathComponent(".git")
+        
+        let rebaseMergeDir = (gitDir as NSString).appendingPathComponent("rebase-merge")
+        let rebaseApplyDir = (gitDir as NSString).appendingPathComponent("rebase-apply")
+        
+        let isMerge = fileManager.fileExists(atPath: rebaseMergeDir)
+        let rebaseDir = isMerge ? rebaseMergeDir : rebaseApplyDir
+        
+        let path = (rebaseDir as NSString).appendingPathComponent("message")
+        try message.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+    
+    func isConflictResolved(file: String, at repo: String) -> Bool {
+        let filePath = (repo as NSString).appendingPathComponent(file)
+        guard let content = try? String(contentsOfFile: filePath, encoding: .utf8) else {
+            return true
+        }
+        return !content.contains("<<<<<<<") && !content.contains("=======") && !content.contains(">>>>>>>")
+    }
+    
+    @discardableResult
+    func continueRebase(at repo: String) async throws -> GitResult {
+        try await run(["rebase", "--continue"], at: repo)
+    }
+    
+    @discardableResult
+    func skipRebase(at repo: String) async throws -> GitResult {
+        try await run(["rebase", "--skip"], at: repo)
+    }
+    
+    @discardableResult
+    func abortRebase(at repo: String) async throws -> GitResult {
+        try await run(["rebase", "--abort"], at: repo)
+    }
+    
+    // MARK: - Merge Assistant helpers
+    
+    func getMergeState(at repo: String) async -> MergeState {
+        let fileManager = FileManager.default
+        let gitDir = (repo as NSString).appendingPathComponent(".git")
+        let mergeHeadPath = (gitDir as NSString).appendingPathComponent("MERGE_HEAD")
+        
+        guard fileManager.fileExists(atPath: mergeHeadPath) else {
+            return MergeState(
+                inProgress: false,
+                sourceBranch: "",
+                targetBranch: "",
+                currentCommitHash: "",
+                defaultCommitMessage: ""
+            )
+        }
+        
+        let mergeHead = (try? String(contentsOfFile: mergeHeadPath, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        let mergeMsgPath = (gitDir as NSString).appendingPathComponent("MERGE_MSG")
+        let mergeMsg = (try? String(contentsOfFile: mergeMsgPath, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        var targetBranch = ""
+        if let result = try? await run(["rev-parse", "--abbrev-ref", "HEAD"], at: repo), result.isSuccess {
+            targetBranch = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        var sourceBranch = ""
+        if let result = try? await run(["name-rev", "--name-only", mergeHead], at: repo), result.isSuccess {
+            let name = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            sourceBranch = name.components(separatedBy: "/").last ?? name
+        }
+        
+        if sourceBranch.isEmpty || sourceBranch.hasPrefix("undefined") {
+            if let firstLine = mergeMsg.components(separatedBy: .newlines).first {
+                let pattern = "'([^']+)'"
+                if let regex = try? NSRegularExpression(pattern: pattern),
+                   let match = regex.firstMatch(in: firstLine, range: NSRange(firstLine.startIndex..., in: firstLine)),
+                   let range = Range(match.range(at: 1), in: firstLine) {
+                    sourceBranch = String(firstLine[range])
+                }
+            }
+        }
+        
+        if sourceBranch.isEmpty {
+            sourceBranch = String(mergeHead.prefix(7))
+        }
+        
+        return MergeState(
+            inProgress: true,
+            sourceBranch: sourceBranch,
+            targetBranch: targetBranch,
+            currentCommitHash: mergeHead,
+            defaultCommitMessage: mergeMsg
+        )
+    }
+    
+    func setMergeMessage(_ message: String, at repo: String) throws {
+        let gitDir = (repo as NSString).appendingPathComponent(".git")
+        let path = (gitDir as NSString).appendingPathComponent("MERGE_MSG")
+        try message.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+    
+    @discardableResult
+    func continueMerge(at repo: String) async throws -> GitResult {
+        try await run(["merge", "--continue"], at: repo)
+    }
+    
+    @discardableResult
+    func abortMerge(at repo: String) async throws -> GitResult {
+        try await run(["merge", "--abort"], at: repo)
     }
 }

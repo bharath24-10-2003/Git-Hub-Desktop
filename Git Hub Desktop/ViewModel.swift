@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import SwiftUI
 
 @Observable
 class ViewModel {
@@ -40,13 +41,18 @@ class ViewModel {
     
     var isCloning: Bool = false
     var isLoading: Bool = false
+    var loadingMessage: String = "Loading..."
     var isCherryPicking: Bool = false
     var errorMessage: String? = nil
     var historyBranch: String? = nil
+    var unPushedCommits: Int = 0
+    var rebaseState = RebaseState(inProgress: false, currentCommitHash: "", currentCommitMessage: "", currentProgress: 0, totalProgress: 0, ontoBranch: "", headName: "")
+    var mergeState = MergeState(inProgress: false, sourceBranch: "", targetBranch: "", currentCommitHash: "", defaultCommitMessage: "")
     
     // MARK: - Diff State
     var selectedFileForDiff: ChangedFile? = nil
     var currentDiff: FileDiff? = nil
+    var isDiffLoading: Bool = false
     
     // MARK: - Presentation Flags
     var showCloneModal: Bool = false
@@ -54,6 +60,7 @@ class ViewModel {
     var showNewBranchModal: Bool = false
     var showMergeModal: Bool = false
     var showRebaseModal: Bool = false
+    var showMergeAssistantModal: Bool = false
     var showDeleteBranchModal: Bool = false
     var showRenameBranchModal: Bool = false
     
@@ -76,6 +83,7 @@ class ViewModel {
     // MARK: - Asynchronous Data Loader
     
     func loadRepositoryData(for repo: Repo) async {
+        self.loadingMessage = "Loading repository data..."
         self.isLoading = true
         self.errorMessage = nil
         
@@ -118,6 +126,7 @@ class ViewModel {
             let branchForLog = self.historyBranch ?? detectedCurrentBranch
             var commitHistory = try await service.log(branch: branchForLog, at: path)
             let unpushedCommits = await service.getUnpushedCommits(branch: branchForLog, at: path)
+            self.unPushedCommits = unpushedCommits.count
             for i in 0..<commitHistory.count {
                 if unpushedCommits.contains(commitHistory[i].id) {
                     commitHistory[i].isPushed = false
@@ -130,6 +139,28 @@ class ViewModel {
             
             // 6. Stashes
             let stashes = try await service.showStashList(at: path)
+            
+            // 7. Check if rebase is in progress
+            let rebaseState = await service.getRebaseState(at: path)
+            let wasRebasing = self.rebaseState.inProgress
+            self.rebaseState = rebaseState
+            
+            if !rebaseState.inProgress {
+                self.showRebaseModal = false
+            } else if !wasRebasing {
+                self.showRebaseModal = true
+            }
+            
+            // 8. Check if merge is in progress
+            let mergeState = await service.getMergeState(at: path)
+            let wasMerging = self.mergeState.inProgress
+            self.mergeState = mergeState
+            
+            if !mergeState.inProgress {
+                self.showMergeAssistantModal = false
+            } else if !wasMerging {
+                self.showMergeAssistantModal = true
+            }
             
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
@@ -165,15 +196,18 @@ class ViewModel {
     
     // MARK: - Diff
     
-    @MainActor
     func loadDiff(for file: ChangedFile, at repo: Repo) async throws {
-        self.selectedFileForDiff = file
-        self.currentDiff = nil // clear while loading
+        self.isDiffLoading = true
         
         do {
             let diff = try await service.getDiff(for: file.path, isStaged: file.isStaged, at: repo.path)
-            self.currentDiff = diff
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                self.selectedFileForDiff = file
+                self.currentDiff = diff
+                self.isDiffLoading = false
+            }
         } catch {
+            self.isDiffLoading = false
             self.errorMessage = error.localizedDescription
             throw error
         }
@@ -205,16 +239,22 @@ class ViewModel {
         }
         
         do {
-            let result = try await service.clone(url: url, to: destinationPath)
+            let repoName = extractRepoName(from: url)
+            var finalPath = destinationPath
+            let pathURL = URL(fileURLWithPath: destinationPath)
+            if pathURL.lastPathComponent != repoName {
+                finalPath = pathURL.appendingPathComponent(repoName).path
+            }
+            
+            let result = try await service.clone(url: url, to: finalPath)
             
             if !result.isSuccess {
                 self.errorMessage = extractErrorMessage(from: result)
                 return result
             }
             
-            let repoName = extractRepoName(from: url)
-            store.addRepo(name: repoName, path: destinationPath)
-            self.selectedRepo = store.repos.first(where: { $0.path == destinationPath })
+            store.addRepo(name: repoName, path: finalPath)
+            self.selectedRepo = store.repos.first(where: { $0.path == finalPath })
             return result
         } catch {
             self.errorMessage = error.localizedDescription
@@ -228,39 +268,58 @@ class ViewModel {
         self.selectedRepo = store.repos.first(where: { $0.path == path })
     }
     
+    func removeRepository(_ repo: Repo) {
+        store.removeRepo(repo)
+        if selectedRepo?.id == repo.id {
+            selectedRepo = store.repos.first
+        }
+    }
+    
     @discardableResult
     func stageAll(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Staging all changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.addAll(at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func stage(file: String, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Staging file..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.add(file: file, at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func unstage(file: String, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Unstaging file..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.restoreStaged(file: file, at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func stageSelected(files: [String], at repo: Repo) async throws -> GitResult {
         guard !files.isEmpty else { return GitResult(output: "", error: "", exitCode: 0) }
+        self.loadingMessage = "Staging selected changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         var lastResult: GitResult? = nil
         for file in files {
             let result = try await service.add(file: file, at: repo.path)
@@ -275,46 +334,61 @@ class ViewModel {
     
     @discardableResult
     func discardAllChanges(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Discarding all changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.discardChanges(at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func discardChange(for file: ChangedFile, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Discarding change..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.discardChange(for: file, at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func commitChanges(message: String, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Committing changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.commit(message: message, at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func fetch(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Fetching updates..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result = try await service.fetch(at: repo.path)
-            if !result.isSuccess {
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
     func pull(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Pulling changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result: GitResult
         if !currentBranch.isEmpty {
             result = try await service.pull(branch: currentBranch, at: repo.path)
@@ -330,21 +404,59 @@ class ViewModel {
     
     @discardableResult
     func pull(name: String, rebase: Bool = false, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Pulling changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result: GitResult
-            if rebase {
-                result = try await service.pull(branch: name, rebase: true, at: repo.path)
-            } else {
-                result = try await service.pull(branch: name, at: repo.path)
-            }
-            if !result.isSuccess {
+        if rebase {
+            result = try await service.pull(branch: name, rebase: true, at: repo.path)
+        } else {
+            result = try await service.pull(branch: name, at: repo.path)
+        }
+        if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
-            await loadRepositoryData(for: repo)
-            return result
+        await loadRepositoryData(for: repo)
+        return result
+    }
+    
+    @discardableResult
+    func mergeBranch(name: String, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Merging branch..."
+        self.isLoading = true
+        defer { self.isLoading = false }
+        let result = try await service.merge(branch: name, at: repo.path)
+        await loadRepositoryData(for: repo)
+        if !result.isSuccess {
+            if mergeState.inProgress || rebaseState.inProgress {
+                return result
+            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        return result
+    }
+    
+    @discardableResult
+    func rebaseBranch(name: String, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Rebasing branch..."
+        self.isLoading = true
+        defer { self.isLoading = false }
+        let result = try await service.rebase(branch: name, at: repo.path)
+        await loadRepositoryData(for: repo)
+        if !result.isSuccess {
+            if rebaseState.inProgress || mergeState.inProgress {
+                return result
+            }
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        return result
     }
     
     @discardableResult
     func push(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Pushing commits..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result: GitResult
         if !currentBranch.isEmpty {
             result = try await service.push(at: repo.path, branch: currentBranch)
@@ -360,6 +472,9 @@ class ViewModel {
     
     @discardableResult
     func checkout(branch: String, at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Checking out branch..."
+        self.isLoading = true
+        defer { self.isLoading = false }
         let result: GitResult
         if remoteBranches.contains(branch) && !localBranches.contains(branch) {
             result = try await service.checkout(branch: branch, trackRemote: true, at: repo.path)
@@ -537,5 +652,112 @@ class ViewModel {
         }
         
         return urlString
+    }
+    
+    // MARK: - Rebase Actions
+    
+    func continueRebase(at repo: Repo) async {
+        self.loadingMessage = "Continuing rebase..."
+        self.isLoading = true
+        self.errorMessage = nil
+        do {
+            let result = try await service.continueRebase(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+    
+    func skipRebase(at repo: Repo) async {
+        self.loadingMessage = "Skipping commit..."
+        self.isLoading = true
+        self.errorMessage = nil
+        do {
+            let result = try await service.skipRebase(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+    
+    func abortRebase(at repo: Repo) async {
+        self.loadingMessage = "Aborting rebase..."
+        self.isLoading = true
+        self.errorMessage = nil
+        do {
+            let result = try await service.abortRebase(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+    
+    func setRebaseMessage(_ message: String, at repo: Repo) {
+        do {
+            try service.setRebaseMessage(message, at: repo.path)
+            // Refresh rebaseState details locally
+            self.rebaseState.currentCommitMessage = message
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+    
+    func isConflictResolved(file: String, at repo: Repo) -> Bool {
+        return service.isConflictResolved(file: file, at: repo.path)
+    }
+    
+    // MARK: - Merge Actions
+    
+    func continueMerge(at repo: Repo) async {
+        self.loadingMessage = "Continuing merge..."
+        self.isLoading = true
+        self.errorMessage = nil
+        do {
+            let result = try await service.continueMerge(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+    
+    func abortMerge(at repo: Repo) async {
+        self.loadingMessage = "Aborting merge..."
+        self.isLoading = true
+        self.errorMessage = nil
+        do {
+            let result = try await service.abortMerge(at: repo.path)
+            if !result.isSuccess {
+                self.errorMessage = extractErrorMessage(from: result)
+            }
+            await loadRepositoryData(for: repo)
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+    
+    func setMergeMessage(_ message: String, at repo: Repo) {
+        do {
+            try service.setMergeMessage(message, at: repo.path)
+            self.mergeState.defaultCommitMessage = message
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
     }
 }
