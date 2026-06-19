@@ -10,7 +10,9 @@ import SwiftUI
 struct StashesView: View {
     
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
+    
     @State var error: String? = nil
     @State var selectedStash: GitStash? = nil
     @State var height: CGFloat = 0
@@ -113,12 +115,53 @@ struct StashesView: View {
 
 struct SingleStashView: View {
 
+    enum StashAction: Identifiable {
+        case apply
+        case pop
+        case delete
+        
+        var id: Self { self }
+        
+        var title: String {
+            switch self {
+            case .apply: return "Apply Stash"
+            case .pop: return "Pop Stash"
+            case .delete: return "Delete Stash"
+            }
+        }
+        
+        var message: String {
+            switch self {
+            case .apply: return "Are you sure you want to apply the changes from this stash to your working directory?"
+            case .pop: return "Are you sure you want to pop this stash? This will apply the changes to your working directory and remove the stash permanently from your list."
+            case .delete: return "Are you sure you want to delete this stash? This action cannot be undone."
+            }
+        }
+        
+        var buttonText: String {
+            switch self {
+            case .apply: return "Apply"
+            case .pop: return "Pop"
+            case .delete: return "Delete"
+            }
+        }
+        
+        var role: ButtonRole? {
+            switch self {
+            case .delete: return .destructive
+            default: return nil
+            }
+        }
+    }
+
     let stash: GitStash
 
     @State private var stashError: String?
     @State var applyStash: () -> Void
     @State var popStash: () -> Void
     @State var deleteStash: () -> Void
+    @State private var pendingAction: StashAction? = nil
+    @State private var showAlert = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -156,7 +199,8 @@ struct SingleStashView: View {
 
                     Button {
                         stashError = nil
-                        applyStash()
+                        pendingAction = .apply
+                        showAlert = true
                     } label: {
                         Text("Apply")
                             .padding(3)
@@ -166,7 +210,8 @@ struct SingleStashView: View {
 
                     Button {
                         stashError = nil
-                        popStash()
+                        pendingAction = .pop
+                        showAlert = true
                     } label: {
                         Text("Pop")
                             .padding(3)
@@ -176,7 +221,8 @@ struct SingleStashView: View {
                     
                     Button {
                         stashError = nil
-                        deleteStash()
+                        pendingAction = .delete
+                        showAlert = true
                     } label: {
                         Text("Delete")
                             .padding(3)
@@ -201,6 +247,22 @@ struct SingleStashView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.gray, lineWidth: 1)
                 .opacity(0.2)
+        }
+        .alert(
+            pendingAction?.title ?? "",
+            isPresented: $showAlert,
+            presenting: pendingAction
+        ) { action in
+            Button(action.buttonText, role: action.role) {
+                switch action {
+                case .apply: applyStash()
+                case .pop: popStash()
+                case .delete: deleteStash()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { action in
+            Text(action.message)
         }
     }
 
@@ -229,5 +291,5 @@ struct NoStashView : View {
 }
 
 #Preview {
-    StashesView(repo: Repo(name: "tvOS-App", path: "/Users/bharath/Documents/Projects/tvOS-App", currentBranch: "develop"), viewModel: ViewModel())
+    StashesView(repo: Repo(name: "tvOS-App", path: "/Users/bharath/Documents/Projects/tvOS-App", currentBranch: "develop"), viewModel: MainViewModel(), coordinator: AppCoordinator())
 }

@@ -1,5 +1,5 @@
 //
-//  ViewModel.swift
+//  MainViewModel.swift
 //  Git Hub Desktop
 //
 //  Created by Bharath on 26/04/26.
@@ -10,7 +10,7 @@ import AppKit
 import SwiftUI
 
 @Observable
-class ViewModel {
+class MainViewModel {
     
     var service: GitService
     var store: RepoStore
@@ -53,16 +53,6 @@ class ViewModel {
     var selectedFileForDiff: ChangedFile? = nil
     var currentDiff: FileDiff? = nil
     var isDiffLoading: Bool = false
-    
-    // MARK: - Presentation Flags
-    var showCloneModal: Bool = false
-    var showAddRepoModal: Bool = false
-    var showNewBranchModal: Bool = false
-    var showMergeModal: Bool = false
-    var showRebaseModal: Bool = false
-    var showMergeAssistantModal: Bool = false
-    var showDeleteBranchModal: Bool = false
-    var showRenameBranchModal: Bool = false
     
     var selectedBranchForAction: String? = nil
     var isRemoteBranchAction: Bool = false
@@ -142,25 +132,11 @@ class ViewModel {
             
             // 7. Check if rebase is in progress
             let rebaseState = await service.getRebaseState(at: path)
-            let wasRebasing = self.rebaseState.inProgress
             self.rebaseState = rebaseState
-            
-            if !rebaseState.inProgress {
-                self.showRebaseModal = false
-            } else if !wasRebasing {
-                self.showRebaseModal = true
-            }
             
             // 8. Check if merge is in progress
             let mergeState = await service.getMergeState(at: path)
-            let wasMerging = self.mergeState.inProgress
             self.mergeState = mergeState
-            
-            if !mergeState.inProgress {
-                self.showMergeAssistantModal = false
-            } else if !wasMerging {
-                self.showMergeAssistantModal = true
-            }
             
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
@@ -463,6 +439,19 @@ class ViewModel {
         } else {
             result = try await service.push(at: repo.path)
         }
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
+    }
+    
+    @discardableResult
+    func forcePush(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Force pushing commits..."
+        self.isLoading = true
+        defer { self.isLoading = false }
+        let result = try await service.forcePush(at: repo.path)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }

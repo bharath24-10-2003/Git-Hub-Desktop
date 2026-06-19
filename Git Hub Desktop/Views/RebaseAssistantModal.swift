@@ -9,7 +9,8 @@ import SwiftUI
 
 struct RebaseAssistantModal: View {
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
     
     @State private var selectedFile: ChangedFile? = nil
     @State private var editedMessage: String = ""
@@ -30,7 +31,7 @@ struct RebaseAssistantModal: View {
                     }
                     Spacer()
                     Button(action: {
-                        viewModel.showRebaseModal = false
+                        coordinator.dismissSheet()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)

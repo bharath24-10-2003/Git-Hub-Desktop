@@ -10,13 +10,13 @@ import SwiftUI
 struct ChangesView: View {
 
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
 
     @State private var commitMessage: String = ""
     @State private var selectedFiles = Set<String>()
     @State private var error: String?
     @State private var stashMessage: String?
-    @State private var isStashPresented: Bool = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -55,11 +55,8 @@ struct ChangesView: View {
                 }
             }
         }
-        .sheet(isPresented: $isStashPresented) {
-            stashModal(viewModel: viewModel, repo: repo, onDismiss: {
-                isStashPresented = false
-            })
-            .padding()
+        .task {
+            await viewModel.loadRepositoryData(for: repo)
         }
     }
     
@@ -130,7 +127,7 @@ struct ChangesView: View {
             }
             Spacer()
             SmallProminentButton(title: "Open Rebase Assistant") {
-                viewModel.showRebaseModal = true
+                coordinator.presentRebaseAssistant(for: repo)
             }
         }
         .padding()
@@ -158,7 +155,7 @@ struct ChangesView: View {
             }
             Spacer()
             SmallProminentButton(title: "Open Merge Assistant") {
-                viewModel.showMergeAssistantModal = true
+                coordinator.presentMergeAssistant(for: repo)
             }
         }
         .padding()
@@ -217,7 +214,7 @@ struct ChangesView: View {
                         .font(.headline)
                     Spacer()
                     SmallButton(title: "Stash") {
-                        isStashPresented = true
+                        coordinator.presentStash(for: repo)
                     }
                     SmallButton(title: "Stage All") {
                         self.error = nil
@@ -294,6 +291,7 @@ struct ChangesView: View {
                                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                             .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
                                             .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
+                                            .animation(.easeInOut, value: viewModel.isDiffLoading)
                                             .id(selectedFile.id)
                                             .transition(.asymmetric(
                                                 insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -311,10 +309,9 @@ struct ChangesView: View {
                         }
                         .frame(minWidth: 500)
                         .background(Color(NSColor.controlBackgroundColor))
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
-                .id(viewModel.selectedFileForDiff == nil)
-                .transition(.move(edge: .trailing))
             }
         }
         .overlay {
@@ -417,7 +414,7 @@ struct TitleView: View {
 }
 #Preview {
     let repo = Repo.init(name: "tvOS-Beacon", path: "test", currentBranch: "main")
-    ChangesView(repo: repo, viewModel: ViewModel())
+    ChangesView(repo: repo, viewModel: MainViewModel(), coordinator: AppCoordinator())
         .frame(width: 500)
         .overlay {
             RoundedRectangle(cornerRadius: 20)
@@ -429,7 +426,7 @@ struct TitleView: View {
 struct ChangedFileRowView: View {
     let file: ChangedFile
     let repo: Repo
-    let viewModel: ViewModel
+    let viewModel: MainViewModel
     let isSelected: Bool
     let isViewingDiff: Bool
     @Binding var error: String?
@@ -439,7 +436,7 @@ struct ChangedFileRowView: View {
         HStack(spacing: 0) {
             // Left Accent Strip
             RoundedRectangle(cornerRadius: 2)
-                .fill(file.isStaged ? Color.blue : Color.red)
+                .fill(file.isStaged ? Color.green : Color.red)
                 .frame(width: 4)
                 .padding(.vertical, 6)
                 .padding(.leading, 6)
@@ -458,7 +455,7 @@ struct ChangedFileRowView: View {
                         
                         Text(file.isStaged ? "● Staged" : "○ Unstaged")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(file.isStaged ? Color.blue : Color.red)
+                            .foregroundStyle(file.isStaged ? Color.green : Color.red)
                     }
                 }
                 Spacer()
@@ -509,8 +506,8 @@ struct ChangedFileRowView: View {
         .contentShape(Rectangle())
         .background(
             isViewingDiff
-            ? (file.isStaged ? Color.blue.opacity(0.18) : Color.red.opacity(0.18))
-            : (file.isStaged ? Color.blue.opacity(0.08) : Color.red.opacity(0.06))
+            ? (file.isStaged ? Color.green.opacity(0.18) : Color.red.opacity(0.18))
+            : (file.isStaged ? Color.green.opacity(0.08) : Color.red.opacity(0.06))
         )
         .onTapGesture {
             Task {
