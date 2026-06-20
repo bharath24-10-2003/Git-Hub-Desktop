@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 struct Repo: Codable, Identifiable, Equatable {
     let id: UUID
@@ -135,6 +136,32 @@ struct Commit: Identifiable, Hashable, Sendable {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         return formatter.localizedString(for: parsedDate, relativeTo: Date())
+    }
+    
+    var authorEmail: String {
+        if let start = author.firstIndex(of: "<"), let end = author.firstIndex(of: ">"), start < end {
+            let emailString = author[author.index(after: start)..<end]
+            return String(emailString).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        return ""
+    }
+    
+    var authorName: String {
+        let parts = author.split(separator: "<")
+        if let first = parts.first {
+            return String(first).trimmingCharacters(in: .whitespaces)
+        }
+        return author
+    }
+    
+    var gravatarURL: URL? {
+        let email = authorEmail
+        guard !email.isEmpty else { return nil }
+        let hash = Insecure.MD5.hash(data: email.data(using: .utf8) ?? Data())
+        let hashString = hash.map { String(format: "%02hhx", $0) }.joined()
+        // Using GitHub's avatar service as primary, fallback to gravatar/identicon
+        return URL(string: "https://avatars.githubusercontent.com/u/e?email=\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&s=88") ?? 
+               URL(string: "https://www.gravatar.com/avatar/\(hashString)?s=88&d=identicon")
     }
 }
 
