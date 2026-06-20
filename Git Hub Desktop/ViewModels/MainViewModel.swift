@@ -75,7 +75,6 @@ class MainViewModel {
     
     func loadRepositoryData(for repo: Repo) async {
         self.loadingMessage = "Loading repository data..."
-        self.isLoading = true
         self.errorMessage = nil
         
         defer {
