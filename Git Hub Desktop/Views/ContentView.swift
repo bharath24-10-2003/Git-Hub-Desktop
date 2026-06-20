@@ -10,12 +10,13 @@ import SwiftUI
 struct ContentView: View {
 
     @Bindable var coordinator: AppCoordinator
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationSplitView {
             Sidebar(
-                selectedRepo: $coordinator.selectedRepo,
-                selectedSection: $coordinator.selectedSection,
+                selectedRepo: $coordinator.viewModel.selectedRepo,
+                selectedSection: $coordinator.viewModel.activeSection,
                 repos: coordinator.viewModel.store.repos,
                 viewModel: coordinator.viewModel,
                 coordinator: coordinator
@@ -23,7 +24,7 @@ struct ContentView: View {
         } detail: {
             VStack(spacing: 0) {
                 TopBar(
-                    repo: coordinator.selectedRepo,
+                    repo: coordinator.viewModel.selectedRepo,
                     viewModel: coordinator.viewModel,
                     coordinator: coordinator
                 )
@@ -32,8 +33,8 @@ struct ContentView: View {
                     .padding(.vertical)
 
                 BodyView(
-                    repo: coordinator.selectedRepo,
-                    section: $coordinator.selectedSection,
+                    repo: coordinator.viewModel.selectedRepo,
+                    section: $coordinator.viewModel.activeSection,
                     viewModel: coordinator.viewModel,
                     coordinator: coordinator
                 )
@@ -70,10 +71,10 @@ struct ContentView: View {
             LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
         }
         .dialogIcon(Image(.branch))
-        .onChange(of: coordinator.selectedRepo) {
+        .onChange(of: coordinator.viewModel.selectedRepo) {
             coordinator.viewModel.historyBranch = nil
-            coordinator.selectedSection = .changes
-            if let repo = coordinator.selectedRepo {
+            coordinator.viewModel.activeSection = .changes
+            if let repo = coordinator.viewModel.selectedRepo {
                 Task {
                     await coordinator.viewModel.loadRepositoryData(for: repo)
                     if coordinator.viewModel.rebaseState.inProgress {
@@ -85,7 +86,7 @@ struct ContentView: View {
             }
         }
         .task {
-            if let repo = coordinator.selectedRepo {
+            if let repo = coordinator.viewModel.selectedRepo {
                 await coordinator.viewModel.loadRepositoryData(for: repo)
                 if coordinator.viewModel.rebaseState.inProgress {
                     coordinator.presentRebaseAssistant(for: repo)
@@ -95,13 +96,22 @@ struct ContentView: View {
             }
         }
         .onChange(of: coordinator.viewModel.rebaseState.inProgress) { _, newValue in
-            if !newValue, let repo = coordinator.selectedRepo, coordinator.activeSheet == .rebaseAssistant(repo) {
+            if !newValue, let repo = coordinator.viewModel.selectedRepo, coordinator.activeSheet == .rebaseAssistant(repo) {
                 coordinator.dismissSheet()
             }
         }
         .onChange(of: coordinator.viewModel.mergeState.inProgress) { _, newValue in
-            if !newValue, let repo = coordinator.selectedRepo, coordinator.activeSheet == .mergeAssistant(repo) {
+            if !newValue, let repo = coordinator.viewModel.selectedRepo, coordinator.activeSheet == .mergeAssistant(repo) {
                 coordinator.dismissSheet()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                if let repo = coordinator.viewModel.selectedRepo {
+                    Task {
+                        await coordinator.viewModel.loadRepositoryData(for: repo)
+                    }
+                }
             }
         }
     }

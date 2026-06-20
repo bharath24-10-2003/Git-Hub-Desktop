@@ -122,10 +122,10 @@ struct Sidebar: View {
                         selectedSection = section
                         if section == .history {
                             viewModel.historyBranch = nil
-                            if let repo = viewModel.selectedRepo {
-                                Task {
-                                    await viewModel.loadRepositoryData(for: repo)
-                                }
+                        }
+                        if let repo = viewModel.selectedRepo {
+                            Task {
+                                await viewModel.loadRepositoryData(for: repo)
                             }
                         }
                     } label: {

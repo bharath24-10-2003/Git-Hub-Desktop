@@ -56,6 +56,7 @@ class MainViewModel {
     
     var selectedBranchForAction: String? = nil
     var isRemoteBranchAction: Bool = false
+    var activeSection: RepoSection = .changes
     
     init () {
         self.service = GitService()
@@ -82,9 +83,31 @@ class MainViewModel {
         }
         
         do {
-            let path = repo.path
+            await loadCoreData(for: repo)
             
-            // 1. Local branches & active branch identification
+            switch activeSection {
+            case .changes:
+                try await loadChanges(for: repo)
+            case .history:
+                try await loadHistory(for: repo)
+            case .branches:
+                break // core data handles branches
+            case .stashes:
+                try await loadStashes(for: repo)
+            }
+            
+            // Update active branch name in RepoStore so it persists
+            if let index = store.repos.firstIndex(where: { $0.id == repo.id }) {
+                store.repos[index].currentBranch = self.currentBranch
+            }
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+    
+    private func loadCoreData(for repo: Repo) async {
+        let path = repo.path
+        do {
             let rawLocalBranches = try await service.getLocalBranches(at: path)
             var cleanLocal: [String] = []
             var detectedCurrentBranch = "main"
@@ -103,71 +126,68 @@ class MainViewModel {
                 }
             }
             
-            // 2. Remote branches
             let rawRemoteBranches = try await service.getRemoteBranches(at: path)
             let cleanRemote = rawRemoteBranches.map {
                 $0.trimmingCharacters(in: .whitespacesAndNewlines)
             }.filter { !$0.isEmpty }
             
-            // 3. Status changes
-            let files = try await service.status(at: path)
-            
-            // 4. Log history
-            let branchForLog = self.historyBranch ?? detectedCurrentBranch
-            var commitHistory = try await service.log(branch: branchForLog, at: path)
-            let unpushedCommits = await service.getUnpushedCommits(branch: branchForLog, at: path)
-            self.unPushedCommits = unpushedCommits.count
-            for i in 0..<commitHistory.count {
-                if unpushedCommits.contains(commitHistory[i].id) {
-                    commitHistory[i].isPushed = false
-                }
-            }
-            
-            // 5. Check if cherry-pick is in progress
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
             let isCherryPickInProgress = FileManager.default.fileExists(atPath: cherryPickPath)
             
-            // 6. Stashes
-            let stashes = try await service.showStashList(at: path)
-            
-            // 7. Check if rebase is in progress
             let rebaseState = await service.getRebaseState(at: path)
-            self.rebaseState = rebaseState
-            
-            // 8. Check if merge is in progress
             let mergeState = await service.getMergeState(at: path)
-            self.mergeState = mergeState
+            
+            let unpushedCount = await service.getUnpushedCommits(branch: detectedCurrentBranch, at: path).count
             
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
             self.currentBranch = detectedCurrentBranch
-            self.changedFiles = files
-            self.commits = commitHistory
             self.isCherryPicking = isCherryPickInProgress
-            self.stashes = stashes
-            
-            // Clear diff if selected file no longer exists
-            if let selected = self.selectedFileForDiff {
-                if let updatedFile = files.first(where: { $0.id == selected.id }) {
-                    self.selectedFileForDiff = updatedFile
-                    // Re-load diff if file still exists
-                    Task {
-                        try? await self.loadDiff(for: updatedFile, at: repo)
-                    }
-                } else {
-                    self.selectedFileForDiff = nil
-                    self.currentDiff = nil
-                }
-            }
-            
-            // Update active branch name in RepoStore so it persists
-            if let index = store.repos.firstIndex(where: { $0.id == repo.id }) {
-                store.repos[index].currentBranch = detectedCurrentBranch
-            }
+            self.rebaseState = rebaseState
+            self.mergeState = mergeState
+            self.unPushedCommits = unpushedCount
         } catch {
             self.errorMessage = error.localizedDescription
-            print("Failed to load repo data:", error)
+            print("Failed to load repo core data:", error)
         }
+    }
+    
+    private func loadChanges(for repo: Repo) async throws {
+        let path = repo.path
+        let files = try await service.status(at: path)
+        self.changedFiles = files
+        
+        // Clear diff if selected file no longer exists
+        if let selected = self.selectedFileForDiff {
+            if let updatedFile = files.first(where: { $0.id == selected.id }) {
+                self.selectedFileForDiff = updatedFile
+                Task {
+                    try? await self.loadDiff(for: updatedFile, at: repo)
+                }
+            } else {
+                self.selectedFileForDiff = nil
+                self.currentDiff = nil
+            }
+        }
+    }
+    
+    private func loadHistory(for repo: Repo) async throws {
+        let path = repo.path
+        let branchForLog = self.historyBranch ?? self.currentBranch
+        var commitHistory = try await service.log(branch: branchForLog, at: path)
+        let unpushedCommits = await service.getUnpushedCommits(branch: branchForLog, at: path)
+        self.unPushedCommits = unpushedCommits.count
+        for i in 0..<commitHistory.count {
+            if unpushedCommits.contains(commitHistory[i].id) {
+                commitHistory[i].isPushed = false
+            }
+        }
+        self.commits = commitHistory
+    }
+    
+    private func loadStashes(for repo: Repo) async throws {
+        let path = repo.path
+        self.stashes = try await service.showStashList(at: path)
     }
     
     // MARK: - Diff
