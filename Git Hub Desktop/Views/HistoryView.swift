@@ -88,18 +88,35 @@ struct HistoryCommitView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(authorInitial)
+                if let url = commit.gravatarURL {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            fallbackAvatar
+                        }
+                    }
                     .frame(width: 44, height: 44)
-                    .font(Font.system(size: 18, weight: .bold, design: .rounded))
-                    .background(Circle().opacity(0.15))
+                    .clipShape(Circle())
+                } else {
+                    fallbackAvatar
+                }
                 VStack(alignment: .leading) {
                     Text(commit.message)
                         .font(Font.system(size: 14,weight: .semibold))
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(commit.timeAgo)
-                                .font(Font.system(size: 11, weight: .medium))
-                                .foregroundStyle(.secondary)
+                            HStack(spacing: 4) {
+                                Text(commit.authorName)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.primary)
+                                Text("•")
+                                Text(commit.timeAgo)
+                            }
+                            .font(Font.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
                             HStack(spacing: 4) {
                                 Text(commit.displayDate)
                                 Text("•")
@@ -227,8 +244,19 @@ struct HistoryCommitView: View {
         }
     }
     
+    private var fallbackAvatar: some View {
+        Text(authorInitial)
+            .frame(width: 44, height: 44)
+            .font(Font.system(size: 18, weight: .bold, design: .rounded))
+            .background(Circle().opacity(0.15))
+            .clipShape(Circle())
+    }
+    
     private var authorInitial: String {
-        let name = commit.author.split(separator: "<")[1].split(separator: "").first ?? ""
-        return String(name.prefix(1)).uppercased()
+        let parts = commit.author.split(separator: "<")
+        if parts.count > 0, let firstChar = parts[0].trimmingCharacters(in: .whitespaces).first {
+            return String(firstChar).uppercased()
+        }
+        return "?"
     }
 }
