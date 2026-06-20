@@ -16,5 +16,11 @@ struct Git_Hub_DesktopApp: App {
             ContentView(coordinator: coordinator)
                 .preferredColorScheme(.light)
         }
+        
+#if os(macOS)
+        Settings {
+            SettingsView()
+        }
+#endif
     }
 }

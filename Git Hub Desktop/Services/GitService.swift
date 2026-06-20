@@ -35,7 +35,7 @@ nonisolated final class GitService {
     
     // Core runner
     @discardableResult
-    func run(_ args: [String], at repoPath: String? = nil) async throws -> GitResult {
+    func run(_ args: [String], at repoPath: String? = nil, stdin: Data? = nil) async throws -> GitResult {
         print("GitService: Running '/usr/bin/git \(args.joined(separator: " "))' at path: '\(repoPath ?? "default")'")
         
         let process = Process()
@@ -58,11 +58,24 @@ nonisolated final class GitService {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
-        do {
-            try process.run()
-        } catch {
-            print("GitService: Failed to start process: \(error.localizedDescription)")
-            throw error
+        if let stdin = stdin {
+            let inputPipe = Pipe()
+            process.standardInput = inputPipe
+            do {
+                try process.run()
+                inputPipe.fileHandleForWriting.write(stdin)
+                inputPipe.fileHandleForWriting.closeFile()
+            } catch {
+                print("GitService: Failed to start process: \(error.localizedDescription)")
+                throw error
+            }
+        } else {
+            do {
+                try process.run()
+            } catch {
+                print("GitService: Failed to start process: \(error.localizedDescription)")
+                throw error
+            }
         }
         
         let outputTask = Task {
@@ -100,6 +113,37 @@ nonisolated final class GitService {
 
 nonisolated extension GitService {
     
+    // Global Config
+    func getGlobalConfig(key: String) async -> String? {
+        let result = try? await run(["config", "--global", key])
+        if let output = result?.output, !output.isEmpty, result?.isSuccess == true {
+            return output
+        }
+        return nil
+    }
+    
+    @discardableResult
+    func setGlobalConfig(key: String, value: String) async throws -> GitResult {
+        if value.isEmpty {
+            return try await run(["config", "--global", "--unset", key])
+        } else {
+            return try await run(["config", "--global", key, value])
+        }
+    }
+    
+    // Authentication
+    @discardableResult
+    func registerPAT(username: String, token: String) async throws -> GitResult {
+        // Ensure credential helper is osxkeychain globally
+        try await setGlobalConfig(key: "credential.helper", value: "osxkeychain")
+        
+        let inputString = "protocol=https\nhost=github.com\nusername=\(username)\npassword=\(token)\n\n"
+        if let data = inputString.data(using: .utf8) {
+            return try await run(["credential", "approve"], stdin: data)
+        }
+        throw GitError.executionFailed("Failed to encode credentials")
+    }
+
     // Clone
     @discardableResult
     func clone(url: String, to path: String) async throws -> GitResult {
