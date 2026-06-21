@@ -14,6 +14,7 @@ class MainViewModel {
     
     var service: GitService
     var store: RepoStore
+    var ollamaService = OllamaService()
     
     // MARK: - Reactive Repository States
     private var lastLoadedRepoId: UUID? = nil
@@ -53,6 +54,10 @@ class MainViewModel {
     var selectedFileForDiff: ChangedFile? = nil
     var currentDiff: FileDiff? = nil
     var isDiffLoading: Bool = false
+    
+    // MARK: - AI State
+    var isGeneratingAI: Bool = false
+    var aiSuggestions: String? = nil
     
     var selectedBranchForAction: String? = nil
     var isRemoteBranchAction: Bool = false
@@ -766,6 +771,51 @@ class MainViewModel {
             self.mergeState.defaultCommitMessage = message
         } catch {
             self.errorMessage = error.localizedDescription
+        }
+    }
+    
+    // MARK: - AI Features
+    
+    func generateCommitMessage(at repo: Repo) async throws -> String {
+        self.isGeneratingAI = true
+        defer { self.isGeneratingAI = false }
+        
+        if await !ollamaService.isOllamaRunning() {
+            try ollamaService.startOllamaProcess()
+            // Wait briefly for the server to start
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+        
+        let diff = try await service.getCombinedDiff(at: repo.path, stagedOnly: true)
+        if diff.isEmpty {
+            throw GitError.executionFailed("No staged changes to generate a message for. Please stage changes first.")
+        }
+        
+        return try await ollamaService.generateCommitMessage(diff: diff)
+    }
+    
+    func generateSuggestions(at repo: Repo) async throws {
+        self.isGeneratingAI = true
+        self.aiSuggestions = nil
+        defer { self.isGeneratingAI = false }
+        
+        if await !ollamaService.isOllamaRunning() {
+            try ollamaService.startOllamaProcess()
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+        
+        let diff = try await service.getCombinedDiff(at: repo.path, stagedOnly: false)
+        if diff.isEmpty {
+            self.aiSuggestions = "No changes to review."
+            return
+        }
+        
+        do {
+            let suggestions = try await ollamaService.generateSuggestions(diff: diff)
+            self.aiSuggestions = suggestions
+        } catch {
+            self.errorMessage = error.localizedDescription
+            throw error
         }
     }
 }

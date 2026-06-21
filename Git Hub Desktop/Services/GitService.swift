@@ -266,6 +266,21 @@ nonisolated extension GitService {
     }
     
     // Diff
+    func getCombinedDiff(at repo: String, stagedOnly: Bool) async throws -> String {
+        var args = ["diff"]
+        if stagedOnly {
+            args.append("--cached")
+        }
+        let result = try await run(args, at: repo)
+        
+        if !result.isSuccess && result.output.isEmpty {
+            throw GitError.executionFailed(result.error)
+        }
+        
+        return result.output
+    }
+    
+    // File Diff
     func getDiff(for file: String, isStaged: Bool, at repo: String) async throws -> FileDiff {
         var args = ["diff"]
         if isStaged {

@@ -176,6 +176,30 @@ struct ChangesView: View {
                     .textFieldStyle(.plain)
                     .font(Font.system(size: 14, weight: .regular))
                     .padding(.leading)
+                
+                if viewModel.isGeneratingAI {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .padding(.horizontal, 4)
+                } else {
+                    Button(action: {
+                        self.error = nil
+                        Task {
+                            do {
+                                let msg = try await viewModel.generateCommitMessage(at: repo)
+                                self.commitMessage = msg
+                            } catch {
+                                self.error = error.localizedDescription
+                            }
+                        }
+                    }) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(.purple)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Auto-generate commit message")
+                }
+                
                 SmallProminentButton(title: "Commit") {
                     guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                     self.error = nil
@@ -248,8 +272,49 @@ struct ChangesView: View {
                             }
                         }
                     }
+                    SmallButton(title: "💡 Suggestions", tint: .purple) {
+                        self.error = nil
+                        Task {
+                            do {
+                                try await viewModel.generateSuggestions(at: repo)
+                            } catch {
+                                self.error = error.localizedDescription
+                            }
+                        }
+                    }
+                    .disabled(viewModel.isGeneratingAI)
                 }
                 .padding()
+                
+                if let suggestions = viewModel.aiSuggestions {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundColor(.purple)
+                            Text("AI Code Suggestions")
+                                .font(.headline)
+                            Spacer()
+                            Button {
+                                viewModel.aiSuggestions = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        ScrollView {
+                            Text(suggestions)
+                                .font(.system(size: 13))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 150)
+                    }
+                    .padding()
+                    .background(Color.purple.opacity(0.1))
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+                }
                 
                 Divider()
                 HSplitView {
