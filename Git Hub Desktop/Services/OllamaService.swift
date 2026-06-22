@@ -21,15 +21,15 @@ enum OllamaError: Error, LocalizedError {
     }
 }
 
-class OllamaService {
+nonisolated class OllamaService {
     
     private let baseURL = URL(string: "http://localhost:11434/api/generate")!
-    private let modelName = "llama3" // Default model
+    private let modelName = "qwen3:8b" // Default model
     private var process: Process?
     
     init() {
-        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.process?.terminate()
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            self.process?.terminate()
         }
     }
     
@@ -132,12 +132,16 @@ class OllamaService {
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            if let errorMessage = json?["error"] as? String {
+                throw OllamaError.generationFailed("Ollama Error: \(errorMessage)")
+            }
             throw OllamaError.invalidResponse
         }
         
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let generatedText = json["response"] as? String else {
+        guard let validJson = json, let generatedText = validJson["response"] as? String else {
             throw OllamaError.invalidResponse
         }
         
