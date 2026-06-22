@@ -458,25 +458,26 @@ nonisolated extension GitService {
         }
     }
     
-    func popStash(at repo: String, index: Int? = nil) async throws -> GitResult {
-        if let index {
-            return try await run(["stash", "pop", "stash@{\(index)}"], at: repo)
+    func popStash(at repo: String,  id: String? = nil) async throws -> GitResult {
+        if let id {
+            return try await run(["stash", "pop", id], at: repo)
         } else {
             return try await run(["stash", "pop"], at: repo)
         }
     }
     
-    func applyStash(at repo: String, index: Int? = nil) async throws -> GitResult {
-        if let index {
-            return try await run(["stash", "apply", "stash@{\(index)}"], at: repo)
+    func applyStash(at repo: String,  id: String? = nil) async throws -> GitResult {
+        if let id {
+            return try await run(["stash", "apply", id], at: repo)
         } else {
             return try await run(["stash", "apply"], at: repo)
         }
     }
     
-    func dropStash(at repo: String, index: Int? = nil) async throws -> GitResult {
-        if let index {
-            return try await run(["stash", "drop", "stash@{\(index)}"], at: repo)
+    func dropStash(at repo: String, id: String? = nil) async throws -> GitResult {
+        if let id {
+            print(id)
+            return try await run(["stash", "drop", id], at: repo)
         } else {
             return try await run(["stash", "drop"], at: repo)
         }

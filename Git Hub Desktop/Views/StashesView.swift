@@ -45,7 +45,7 @@ struct StashesView: View {
                                     SingleStashView(stash: stash, applyStash: {
                                         Task {
                                             do {
-                                                let result = try await viewModel.applyStash(at: repo)
+                                                let result = try await viewModel.applyStash(at: repo, id: stash.id)
                                                 if !result.isSuccess {
                                                     self.error = result.error
                                                 }
@@ -56,7 +56,7 @@ struct StashesView: View {
                                     }, popStash: {
                                         Task {
                                             do {
-                                                let result = try await viewModel.popStash(at: repo)
+                                                let result = try await viewModel.popStash(at: repo, id: stash.id)
                                                 if !result.isSuccess {
                                                     self.error = result.error
                                                 }
@@ -67,7 +67,7 @@ struct StashesView: View {
                                     }, deleteStash: {
                                         Task {
                                             do {
-                                                let result = try await viewModel.dropStash(at: repo)
+                                                let result = try await viewModel.dropStash(at: repo, id: stash.id)
                                                 if !result.isSuccess {
                                                     self.error = result.error
                                                 }

@@ -525,8 +525,8 @@ class MainViewModel {
         return result
     }
     
-    func applyStash(at repo: Repo) async throws -> GitResult {
-        let result = try await service.applyStash(at: repo.path)
+    func applyStash(at repo: Repo, id: String? = nil) async throws -> GitResult {
+        let result = try await service.applyStash(at: repo.path, id: id)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
@@ -534,8 +534,8 @@ class MainViewModel {
         return result
     }
     
-    func popStash(at repo: Repo) async throws -> GitResult {
-        let result = try await service.popStash(at: repo.path)
+    func popStash(at repo: Repo, id: String? = nil) async throws -> GitResult {
+        let result = try await service.popStash(at: repo.path, id: id)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
@@ -543,8 +543,8 @@ class MainViewModel {
         return result
     }
     
-    func dropStash(at repo: Repo) async throws -> GitResult {
-        let result = try await service.dropStash(at: repo.path)
+    func dropStash(at repo: Repo, id: String? = nil) async throws -> GitResult {
+        let result = try await service.dropStash(at: repo.path, id: id)
         await loadRepositoryData(for: repo)
         return result
     }
