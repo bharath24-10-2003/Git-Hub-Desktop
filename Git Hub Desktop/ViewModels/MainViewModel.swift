@@ -42,6 +42,9 @@ class MainViewModel {
     var isCloning: Bool = false
     var isLoading: Bool = false
     var loadingMessage: String = "Loading..."
+    var isStreamingHooks: Bool = false
+    var hookTasks: [HookTask] = []
+    
     var isCherryPicking: Bool = false
     var errorMessage: String? = nil
     var historyBranch: String? = nil
@@ -374,8 +377,17 @@ class MainViewModel {
     func commitChanges(message: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Committing changes..."
         self.isLoading = true
-        defer { self.isLoading = false }
-        let result = try await service.commit(message: message, at: repo.path)
+        self.isStreamingHooks = false
+        self.hookTasks = []
+        defer {
+            self.isLoading = false
+            self.isStreamingHooks = false
+        }
+        let result = try await service.commit(message: message, at: repo.path) { @Sendable [weak self] line in
+            Task { @MainActor in
+                self?.parseHookOutput(line: line)
+            }
+        }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
@@ -468,12 +480,25 @@ class MainViewModel {
     func push(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pushing commits..."
         self.isLoading = true
-        defer { self.isLoading = false }
+        self.isStreamingHooks = false
+        self.hookTasks = []
+        defer {
+            self.isLoading = false
+            self.isStreamingHooks = false
+        }
         let result: GitResult
         if !currentBranch.isEmpty {
-            result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream)
+            result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream) { @Sendable [weak self] line in
+                Task { @MainActor in
+                    self?.parseHookOutput(line: line)
+                }
+            }
         } else {
-            result = try await service.push(at: repo.path)
+            result = try await service.push(at: repo.path) { @Sendable [weak self] line in
+                Task { @MainActor in
+                    self?.parseHookOutput(line: line)
+                }
+            }
         }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -783,6 +808,59 @@ class MainViewModel {
             self.mergeState.defaultCommitMessage = message
         } catch {
             self.errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Git Hook Parsing
+extension MainViewModel {
+    func parseHookOutput(line: String) {
+        let text = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return }
+        
+        // Ensure we switch to streaming view
+        if !isStreamingHooks {
+            isStreamingHooks = true
+        }
+        
+        let lower = text.lowercased()
+        
+        // Heuristics for finding task names
+        var taskName = text
+        var status: HookStatus = .running
+        
+        if let dotIndex = text.range(of: "...") {
+            taskName = String(text[..<dotIndex.lowerBound]).trimmingCharacters(in: .whitespaces)
+        } else if text.hasPrefix("Running ") {
+            taskName = text
+        } else {
+            // Keep it simple if it's just raw output
+        }
+        
+        if lower.hasSuffix("passed") {
+            status = .passed
+        } else if lower.hasSuffix("failed") {
+            status = .failed
+        } else if lower.hasSuffix("skipped") {
+            status = .skipped
+        } else if lower.contains("running") {
+            status = .running
+        } else {
+            // If we don't detect a clear status at the end, and we already know this task, keep it running.
+            // Wait, if it has no dots and doesn't match above, it's just arbitrary log output.
+            if !hookTasks.isEmpty {
+                hookTasks[hookTasks.count - 1].rawOutput.append(text)
+                return
+            }
+        }
+        
+        // Find existing or create new
+        if let idx = hookTasks.firstIndex(where: { $0.name == taskName }) {
+            hookTasks[idx].status = status
+            hookTasks[idx].rawOutput.append(text)
+        } else {
+            let newTask = HookTask(name: taskName, status: status, rawOutput: [text])
+            hookTasks.append(newTask)
         }
     }
 }
