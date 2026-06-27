@@ -278,7 +278,7 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 400)
+                    .frame(minWidth: 400,maxWidth: 500)
                     
                     if viewModel.selectedFileForDiff != nil {
                         // Right: Diff View
