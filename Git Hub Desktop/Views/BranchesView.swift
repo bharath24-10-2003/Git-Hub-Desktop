@@ -116,9 +116,9 @@ struct BranchesView: View {
                                     }
                                     Button {
                                         viewModel.historyBranch = branch
+                                        selectedSection = .history
                                         Task {
                                             await viewModel.loadRepositoryData(for: repo)
-                                            selectedSection = .history
                                         }
                                     } label: {
                                         HStack {
@@ -193,9 +193,9 @@ struct BranchesView: View {
                                     }
                                     Button {
                                         viewModel.historyBranch = branch
+                                        selectedSection = .history
                                         Task {
                                             await viewModel.loadRepositoryData(for: repo)
-                                            selectedSection = .history
                                         }
                                     } label: {
                                         HStack {
