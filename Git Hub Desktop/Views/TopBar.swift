@@ -81,7 +81,7 @@ struct TopBar: View {
                             }
                         }
                     }
-                    ProminentBaseButton(title: "Push" + (viewModel.unPushedCommits != 0 ? " (\(viewModel.unPushedCommits))" : ""), image: Image(.push)) {
+                    ProminentBaseButton(title: (!viewModel.hasUpstream ? "Publish branch" : "Push") + (viewModel.unPushedCommits != 0 ? " (\(viewModel.unPushedCommits))" : ""), image: Image(.push)) {
                         self.error = nil
                         Task {
                             do {

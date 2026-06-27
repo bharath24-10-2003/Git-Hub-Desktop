@@ -46,6 +46,7 @@ class MainViewModel {
     var errorMessage: String? = nil
     var historyBranch: String? = nil
     var unPushedCommits: Int = 0
+    var hasUpstream: Bool = true
     var rebaseState = RebaseState(inProgress: false, currentCommitHash: "", currentCommitMessage: "", currentProgress: 0, totalProgress: 0, ontoBranch: "", headName: "")
     var mergeState = MergeState(inProgress: false, sourceBranch: "", targetBranch: "", currentCommitHash: "", defaultCommitMessage: "")
     
@@ -137,6 +138,7 @@ class MainViewModel {
             let mergeState = await service.getMergeState(at: path)
             
             let unpushedCount = await service.getUnpushedCommits(branch: detectedCurrentBranch, at: path).count
+            let hasUpstream = await service.hasUpstream(branch: detectedCurrentBranch, at: path)
             
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
@@ -145,6 +147,7 @@ class MainViewModel {
             self.rebaseState = rebaseState
             self.mergeState = mergeState
             self.unPushedCommits = unpushedCount
+            self.hasUpstream = hasUpstream
         } catch {
             self.errorMessage = error.localizedDescription
             print("Failed to load repo core data:", error)
@@ -454,7 +457,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result: GitResult
         if !currentBranch.isEmpty {
-            result = try await service.push(at: repo.path, branch: currentBranch)
+            result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream)
         } else {
             result = try await service.push(at: repo.path)
         }
