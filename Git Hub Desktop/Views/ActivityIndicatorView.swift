@@ -26,7 +26,6 @@ struct AQILoaderView: View {
             variableValue: variableValue
         )
         .font(.system(size: size))
-        .symbolEffect(.breathe.pulse.wholeSymbol)
         .task {
             await startLoadingAnimation()
         }
