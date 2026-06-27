@@ -173,6 +173,7 @@ struct CommitFileRowView: View {
             Image(systemName: "doc.text")
                 .foregroundColor(statusColor)
             Text(file.path.split(separator: "/").last ?? "")
+                .appFont(.subheadline)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Text(file.status)

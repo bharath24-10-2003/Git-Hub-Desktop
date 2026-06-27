@@ -39,6 +39,7 @@ struct TopBar: View {
                             } label: {
                                 HStack {
                                     Text(branch)
+                                        .appFont(.subheadline)
                                     if branch == (viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch) {
                                         Image(systemName: "checkmark")
                                     }
@@ -49,6 +50,7 @@ struct TopBar: View {
                         HStack {
                             Image(systemName: "arrow.trianglehead.branch")
                             Text(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
+                                .appFont(.subheadline)
                         }
                         .background {
                             RoundedRectangle(cornerRadius: 10)
