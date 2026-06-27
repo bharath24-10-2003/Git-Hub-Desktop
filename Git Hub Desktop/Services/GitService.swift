@@ -175,9 +175,13 @@ nonisolated extension GitService {
     
     // Push / Pull
     @discardableResult
-    func push(at repo: String, branch: String? = nil) async throws -> GitResult {
+    func push(at repo: String, branch: String? = nil, setUpstream: Bool = false) async throws -> GitResult {
         if let branch {
-            return try await run(["push", "origin", branch], at: repo)
+            if setUpstream {
+                return try await run(["push", "-u", "origin", branch], at: repo)
+            } else {
+                return try await run(["push", "origin", branch], at: repo)
+            }
         } else {
             return try await run(["push"], at: repo)
         }
@@ -225,6 +229,11 @@ nonisolated extension GitService {
         return parseLog(result.output)
     }
     
+    func hasUpstream(branch: String, at repo: String) async -> Bool {
+        let result = try? await run(["rev-parse", "--abbrev-ref", "\(branch)@{u}"], at: repo)
+        return result?.isSuccess == true
+    }
+
     // Get unpushed commits
     func getUnpushedCommits(branch: String, at repo: String) async -> Set<String> {
         let result = try? await run(["log", branch, "--not", "--remotes", "--format=%H"], at: repo)
