@@ -26,7 +26,7 @@ struct Sidebar: View {
                     .foregroundStyle(.secondary)
                 
                 ScrollView([.vertical]) {
-                    VStack(spacing: 4) {
+                    VStack(alignment: .leading, spacing: 4) {
                         
                         ForEach(repos) { repo in
                             
@@ -40,6 +40,7 @@ struct Sidebar: View {
                                     Spacer()
                                 }
                                 .padding(10)
+                                .contentShape(Rectangle())
                                 .background(
                                     selectedRepo == repo
                                     ? Color.gray.opacity(0.15)
@@ -77,6 +78,7 @@ struct Sidebar: View {
                                 Spacer()
                             }
                             .padding(8)
+                            .contentShape(Rectangle())
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.blue)
                             .background(Color.blue.opacity(0.06))
@@ -94,6 +96,7 @@ struct Sidebar: View {
                                 Spacer()
                             }
                             .padding(8)
+                            .contentShape(Rectangle())
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.blue)
                             .background(Color.blue.opacity(0.06))
@@ -136,6 +139,7 @@ struct Sidebar: View {
                             Spacer()
                         }
                         .padding(10)
+                        .contentShape(Rectangle())
                         .background(
                             selectedSection == section
                             ? Color.blue.opacity(0.15)
