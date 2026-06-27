@@ -30,6 +30,7 @@ struct SettingsView: View {
 
 struct AppearanceSettingsView: View {
     @AppStorage("appTheme") private var appTheme = AppTheme.system
+    @AppStorage("appFontStyle") private var appFontStyle = AppFontStyle.system
     
     var body: some View {
         Form {
@@ -39,7 +40,13 @@ struct AppearanceSettingsView: View {
                 }
             }
             .pickerStyle(SegmentedPickerStyle())
-            .padding()
+            
+            Picker("Font Style", selection: $appFontStyle) {
+                ForEach(AppFontStyle.allCases) { style in
+                    Text(style.rawValue).tag(style)
+                }
+            }
+            .pickerStyle(MenuPickerStyle())
         }
         .padding(30)
     }
