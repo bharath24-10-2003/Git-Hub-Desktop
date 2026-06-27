@@ -60,7 +60,7 @@ struct ContentView: View {
             case .mergeAssistant(let repo):
                 MergeAssistantModal(repo: repo, viewModel: coordinator.viewModel, coordinator: coordinator)
             case .stash(let repo):
-                stashModal(viewModel: coordinator.viewModel, repo: repo, onDismiss: {
+                StashModal(viewModel: coordinator.viewModel, repo: repo, onDismiss: {
                     coordinator.dismissSheet()
                 })
             case .cherryPick(let repo):

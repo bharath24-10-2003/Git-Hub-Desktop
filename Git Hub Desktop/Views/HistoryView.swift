@@ -148,7 +148,7 @@ struct HistoryCommitView: View {
                             .padding(3)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
                 }
                 
                 Button {
@@ -165,7 +165,7 @@ struct HistoryCommitView: View {
                         .padding(3)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 20))
-                .buttonStyle(.glass)
+                .buttonStyle(.bordered)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -206,7 +206,10 @@ struct HistoryCommitView: View {
             
             Divider()
             
-            HStack {
+            HStack(alignment: .bottom) {
+                
+                Spacer()
+                
                 BaseButton(title: "Soft Reset") {
                     self.resetError = nil
                     Task {
@@ -219,7 +222,6 @@ struct HistoryCommitView: View {
                         }
                     }
                 }
-                .padding(.trailing, 24)
                 
                 BaseButton(title: "Hard Reset") {
                     self.resetError = nil
@@ -233,7 +235,6 @@ struct HistoryCommitView: View {
                         }
                     }
                 }
-                .padding(.trailing, 24)
                 
                 BaseButton(title: "Cancel") {
                     showResetModal = false

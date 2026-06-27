@@ -32,7 +32,7 @@ struct CommitDiffDetailView: View {
                             .font(.system(size: 14, weight: .bold))
                     }
                     .clipShape(Circle())
-                    .buttonStyle(.glass)
+                    .buttonStyle(.borderedProminent)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)

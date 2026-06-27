@@ -206,7 +206,7 @@ struct SingleStashView: View {
                             .padding(3)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.borderedProminent)
 
                     Button {
                         stashError = nil
@@ -217,7 +217,7 @@ struct SingleStashView: View {
                             .padding(3)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
                     
                     Button {
                         stashError = nil
@@ -228,7 +228,7 @@ struct SingleStashView: View {
                             .padding(3)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .buttonStyle(.glass)
+                    .buttonStyle(.bordered)
                     .tint(.red)
                 }
             }

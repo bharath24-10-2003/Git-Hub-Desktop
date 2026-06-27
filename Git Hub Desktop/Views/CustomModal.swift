@@ -85,7 +85,7 @@ struct CloneModal: View {
     }
 }
 
-struct stashModal: View {
+struct StashModal: View {
     
     let viewModel: MainViewModel
     let repo: Repo
@@ -140,6 +140,7 @@ struct stashModal: View {
                 }
             }
         }
+        .padding()
     }
 }
 
@@ -256,7 +257,7 @@ struct BaseButton: View {
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
                 .frame(height: 42)
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.bordered)
         .tint(.white)
     }
 }
