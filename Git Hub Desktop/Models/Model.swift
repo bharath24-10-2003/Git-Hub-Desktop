@@ -165,46 +165,6 @@ struct Commit: Identifiable, Hashable, Sendable {
     }
 }
 
-extension Commit {
-    static let previewData: [Commit] = [
-        Commit(
-            id: "1",
-            shortHash: "a56afc6",
-            author: "Bharath <bharath.a@tringapps.com>",
-            date: "Thu Nov 13 14:15:59 2025 +0530",
-            message: "Initial commit"
-        ),
-        Commit(
-            id: "2",
-            shortHash: "f8d123a",
-            author: "Janani <janani@TRLCHMB207-63.local>",
-            date: "Thu Nov 13 15:20:10 2025 +0530",
-            message: "Added login screen"
-        ),
-        Commit(
-            id: "3",
-            shortHash: "bc91e2d",
-            author: "Tring-Priya <priya.dg@tringapps.com>",
-            date: "Thu Nov 13 16:05:45 2025 +0530",
-            message: "Fixed websocket issue"
-        ),
-        Commit(
-            id: "4",
-            shortHash: "9ae67b1",
-            author: "Bharath <bharath.a@tringapps.com>",
-            date: "Fri Nov 14 09:10:11 2025 +0530",
-            message: "Added dark mode"
-        ),
-        Commit(
-            id: "5",
-            shortHash: "e1245ab",
-            author: "Janani <janani@TRLCHMB207-63.local>",
-            date: "Fri Nov 14 11:42:18 2025 +0530",
-            message: "Refactored API layer"
-        )
-    ]
-}
-
 struct GitStash: Identifiable, Hashable {
     let id: String
     let type: String

@@ -46,7 +46,7 @@ class MainViewModel {
     var hookTasks: [HookTask] = []
     
     var isCherryPicking: Bool = false
-    var errorMessage: String? = nil
+    var currentGitError: GitAnalyzedError? = nil
     var historyBranch: String? = nil
     var unPushedCommits: Int = 0
     var hasUpstream: Bool = true
@@ -79,7 +79,7 @@ class MainViewModel {
     
     func loadRepositoryData(for repo: Repo) async {
         self.loadingMessage = "Loading repository data..."
-        self.errorMessage = nil
+        self.currentGitError = nil
         
         defer {
             self.isLoading = false
@@ -104,7 +104,7 @@ class MainViewModel {
                 store.repos[index].currentBranch = self.currentBranch
             }
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
         }
     }
     
@@ -152,7 +152,7 @@ class MainViewModel {
             self.unPushedCommits = unpushedCount
             self.hasUpstream = hasUpstream
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             print("Failed to load repo core data:", error)
         }
     }
@@ -223,7 +223,7 @@ class MainViewModel {
             }
         } catch {
             self.isDiffLoading = false
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             throw error
         }
     }
@@ -238,16 +238,11 @@ class MainViewModel {
     
     // MARK: - Asynchronous Git Actions
     
-    private func extractErrorMessage(from result: GitResult) -> String {
-        if !result.error.isEmpty { return result.error }
-        if !result.output.isEmpty { return result.output }
-        return "Unknown Git error"
-    }
-    
+    // MARK: - Smart Error Handling (removed extractErrorMessage)
     @discardableResult
     func cloneRepo(url: String, destinationPath: String) async -> GitResult? {
         self.isCloning = true
-        self.errorMessage = nil
+        self.currentGitError = nil
         
         defer {
             self.isCloning = false
@@ -264,7 +259,7 @@ class MainViewModel {
             let result = try await service.clone(url: url, to: finalPath)
             
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                self.currentGitError = GitErrorAnalyzer.analyze(result: result)
                 return result
             }
             
@@ -272,7 +267,7 @@ class MainViewModel {
             self.selectedRepo = store.repos.first(where: { $0.path == finalPath })
             return result
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             return nil
         }
     }
@@ -297,7 +292,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.addAll(at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -310,7 +305,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.add(file: file, at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -323,7 +318,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.restoreStaged(file: file, at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -340,7 +335,7 @@ class MainViewModel {
             let result = try await service.add(file: file, at: repo.path)
             lastResult = result
             if !result.isSuccess {
-                throw GitError.executionFailed(extractErrorMessage(from: result))
+                throw GitErrorAnalyzer.analyze(result: result)
             }
         }
         await loadRepositoryData(for: repo)
@@ -354,7 +349,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.discardChanges(at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -367,7 +362,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.discardChange(for: file, at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -389,7 +384,7 @@ class MainViewModel {
             }
         }
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -402,7 +397,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.fetch(at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -420,7 +415,7 @@ class MainViewModel {
             result = try await service.pull(at: repo.path)
         }
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -438,7 +433,7 @@ class MainViewModel {
             result = try await service.pull(branch: name, at: repo.path)
         }
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -455,7 +450,7 @@ class MainViewModel {
             if mergeState.inProgress || rebaseState.inProgress {
                 return result
             }
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         return result
     }
@@ -471,7 +466,7 @@ class MainViewModel {
             if rebaseState.inProgress || mergeState.inProgress {
                 return result
             }
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         return result
     }
@@ -501,7 +496,7 @@ class MainViewModel {
             }
         }
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -514,7 +509,7 @@ class MainViewModel {
         defer { self.isLoading = false }
         let result = try await service.forcePush(at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -544,7 +539,7 @@ class MainViewModel {
     func createBranch(name: String, from sourceBranch: String? = nil, at repo: Repo) async throws -> GitResult {
         let result = try await service.createBranch(branch: name, from: sourceBranch, at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -565,7 +560,7 @@ class MainViewModel {
     func applyStash(at repo: Repo, id: String? = nil) async throws -> GitResult {
         let result = try await service.applyStash(at: repo.path, id: id)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -574,7 +569,7 @@ class MainViewModel {
     func popStash(at repo: Repo, id: String? = nil) async throws -> GitResult {
         let result = try await service.popStash(at: repo.path, id: id)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -590,7 +585,7 @@ class MainViewModel {
     func revertCommit(_ hash: String, at repo: Repo) async throws -> GitResult {
         let result = try await service.revert(commit: hash, at: repo.path)
             if !result.isSuccess {
-                throw GitError.executionFailed(extractErrorMessage(from: result))
+                throw GitErrorAnalyzer.analyze(result: result)
             }
             await loadRepositoryData(for: repo)
             return result
@@ -600,7 +595,7 @@ class MainViewModel {
     func resetCommit(_ hash: String, hard: Bool = false, at repo: Repo) async throws -> GitResult {
         let result = try await service.reset(commit: hash, hard: hard, at: repo.path)
         if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
         await loadRepositoryData(for: repo)
         return result
@@ -610,7 +605,7 @@ class MainViewModel {
     func cherryPickCommit(_ hash: String, at repo: Repo) async throws -> GitResult {
         let result = try await service.cherryPick(commit: hash, at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -620,7 +615,7 @@ class MainViewModel {
     func cherryPickContinue(at repo: Repo) async throws -> GitResult {
         let result = try await service.cherryPickContinue(at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -630,7 +625,7 @@ class MainViewModel {
     func cherryPickAbort(at repo: Repo) async throws -> GitResult {
         let result = try await service.cherryPickAbort(at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -640,7 +635,7 @@ class MainViewModel {
     func cherryPickSkip(at repo: Repo) async throws -> GitResult {
         let result = try await service.cherryPickSkip(at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -650,7 +645,7 @@ class MainViewModel {
     func deleteBranch(branch: String, force: Bool = false, isRemote: Bool = false, at repo: Repo) async throws -> GitResult {
         let result = try await service.deleteBranch(branch: branch, force: force, isRemote: isRemote, at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -660,7 +655,7 @@ class MainViewModel {
     func renameBranch(oldName: String, newName: String, isRemote: Bool = false, at repo: Repo) async throws -> GitResult {
         let result = try await service.renameBranch(oldName: oldName, newName: newName, isRemote: isRemote, at: repo.path)
             if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+            throw GitErrorAnalyzer.analyze(result: result)
         }
             await loadRepositoryData(for: repo)
             return result
@@ -709,15 +704,15 @@ class MainViewModel {
     func continueRebase(at repo: Repo) async {
         self.loadingMessage = "Continuing rebase..."
         self.isLoading = true
-        self.errorMessage = nil
+        self.currentGitError = nil
         do {
             let result = try await service.continueRebase(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                self.currentGitError = GitErrorAnalyzer.analyze(result: result)
             }
             await loadRepositoryData(for: repo)
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             self.isLoading = false
         }
     }
@@ -725,15 +720,15 @@ class MainViewModel {
     func skipRebase(at repo: Repo) async {
         self.loadingMessage = "Skipping commit..."
         self.isLoading = true
-        self.errorMessage = nil
+        self.currentGitError = nil
         do {
             let result = try await service.skipRebase(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                self.currentGitError = GitErrorAnalyzer.analyze(result: result)
             }
             await loadRepositoryData(for: repo)
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             self.isLoading = false
         }
     }
@@ -741,15 +736,15 @@ class MainViewModel {
     func abortRebase(at repo: Repo) async {
         self.loadingMessage = "Aborting rebase..."
         self.isLoading = true
-        self.errorMessage = nil
+        self.currentGitError = nil
         do {
             let result = try await service.abortRebase(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                self.currentGitError = GitErrorAnalyzer.analyze(result: result)
             }
             await loadRepositoryData(for: repo)
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             self.isLoading = false
         }
     }
@@ -760,7 +755,7 @@ class MainViewModel {
             // Refresh rebaseState details locally
             self.rebaseState.currentCommitMessage = message
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
         }
     }
     
@@ -773,15 +768,15 @@ class MainViewModel {
     func continueMerge(at repo: Repo) async {
         self.loadingMessage = "Continuing merge..."
         self.isLoading = true
-        self.errorMessage = nil
+        self.currentGitError = nil
         do {
             let result = try await service.continueMerge(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                self.currentGitError = GitErrorAnalyzer.analyze(result: result)
             }
             await loadRepositoryData(for: repo)
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             self.isLoading = false
         }
     }
@@ -789,15 +784,15 @@ class MainViewModel {
     func abortMerge(at repo: Repo) async {
         self.loadingMessage = "Aborting merge..."
         self.isLoading = true
-        self.errorMessage = nil
+        self.currentGitError = nil
         do {
             let result = try await service.abortMerge(at: repo.path)
             if !result.isSuccess {
-                self.errorMessage = extractErrorMessage(from: result)
+                self.currentGitError = GitErrorAnalyzer.analyze(result: result)
             }
             await loadRepositoryData(for: repo)
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
             self.isLoading = false
         }
     }
@@ -807,7 +802,7 @@ class MainViewModel {
             try service.setMergeMessage(message, at: repo.path)
             self.mergeState.defaultCommitMessage = message
         } catch {
-            self.errorMessage = error.localizedDescription
+            self.handleError(error)
         }
     }
 }
@@ -863,4 +858,105 @@ extension MainViewModel {
             hookTasks.append(newTask)
         }
     }
+
+    // MARK: - Smart Error Handling
+    
+    @MainActor
+    func handleError(_ error: Error) {
+        if let gitError = error as? GitAnalyzedError {
+            self.currentGitError = gitError
+        } else if let gitError = error as? GitError {
+            self.currentGitError = GitAnalyzedError(type: .unknown, title: "Git Error", description: gitError.localizedDescription, reason: nil, suggestedFix: nil, primaryAction: .dismiss, secondaryAction: nil, rawOutput: "")
+        } else {
+            self.currentGitError = GitAnalyzedError(type: .unknown, title: "Error", description: error.localizedDescription, reason: nil, suggestedFix: nil, primaryAction: .dismiss, secondaryAction: nil, rawOutput: "")
+        }
+    }
+    
+    @MainActor
+    func handleRecoveryAction(_ action: GitRecoveryAction) {
+        self.currentGitError = nil
+        
+        Task {
+            switch action {
+            case .stageAllAndCommit:
+                if let repo = selectedRepo {
+                    do {
+                        try await service.run(["add", "."], at: repo.path)
+                        // Trigger commit view or commit directly if we have a message?
+                        // For safety, let's just open changes so user can commit.
+                    } catch {}
+                }
+            case .openChanges:
+                // Do nothing, UI is already there or we just dismiss
+                break
+            case .returnToCommitEditor:
+                break
+            case .pullAndRebase:
+                if let repo = selectedRepo {
+                    let branchName = self.currentBranch.isEmpty ? repo.currentBranch : self.currentBranch
+                    do {
+                        _ = try await pull(name: branchName, rebase: true, at: repo)
+                    } catch {
+                        await self.handleError(error)
+                    }
+                }
+            case .pullAndMerge:
+                if let repo = selectedRepo {
+                    let branchName = self.currentBranch.isEmpty ? repo.currentBranch : self.currentBranch
+                    do {
+                        _ = try await pull(name: branchName, rebase: false, at: repo)
+                    } catch {
+                        await self.handleError(error)
+                    }
+                }
+            case .forcePush:
+                if let repo = selectedRepo {
+                    let branchName = self.currentBranch.isEmpty ? repo.currentBranch : self.currentBranch
+                    do {
+                        let remote = "origin"
+                        _ = try await service.run(["push", remote, branchName, "--force"], at: repo.path)
+                        await loadRepositoryData(for: repo)
+                    } catch {
+                        await self.handleError(error)
+                    }
+                }
+            case .openMergeAssistant, .openRebaseAssistant, .openCherryPickAssistant:
+                break
+            case .abortMerge:
+                if let repo = selectedRepo {
+                    do { _ = try await service.run(["merge", "--abort"], at: repo.path) } catch {}
+                }
+            case .abortRebase:
+                if let repo = selectedRepo {
+                    do { _ = try await service.run(["rebase", "--abort"], at: repo.path) } catch {}
+                }
+            case .skipCommit:
+                if let repo = selectedRepo {
+                    do { _ = try await service.run(["rebase", "--skip"], at: repo.path) } catch {}
+                }
+            case .abortCherryPick:
+                if let repo = selectedRepo {
+                    do { _ = try await service.run(["cherry-pick", "--abort"], at: repo.path) } catch {}
+                }
+            case .createBranch, .checkoutExistingBranch, .renameBranch:
+                break
+            case .stashChanges:
+                if let repo = selectedRepo {
+                    do { _ = try await service.run(["stash"], at: repo.path) } catch {}
+                }
+            case .discardFiles:
+                if let repo = selectedRepo {
+                    do { _ = try await service.run(["reset", "--hard"], at: repo.path) } catch {}
+                }
+            case .updateCredentials, .retry, .editRemoteURL, .openNetworkSettings, .pushAndSetUpstream, .viewFullLog, .openRepository, .dismiss:
+                break
+            }
+            
+            // Reload if needed
+            if let repo = selectedRepo {
+                await loadRepositoryData(for: repo)
+            }
+        }
+    }
+
 }

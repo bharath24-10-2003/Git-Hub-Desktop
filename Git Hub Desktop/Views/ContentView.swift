@@ -74,6 +74,11 @@ struct ContentView: View {
                 LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
             }
         }
+        .sheet(item: $coordinator.viewModel.currentGitError) { error in
+            GitErrorDialog(error: error) { action in
+                coordinator.viewModel.handleRecoveryAction(action)
+            }
+        }
         .dialogIcon(Image(.branch))
         .onChange(of: coordinator.viewModel.selectedRepo) {
             coordinator.viewModel.historyBranch = nil

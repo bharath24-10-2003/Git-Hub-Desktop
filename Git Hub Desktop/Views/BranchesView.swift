@@ -14,10 +14,9 @@ struct BranchesView: View {
     @Binding var selectedSection: RepoSection
     let coordinator: AppCoordinator
     
-    @State var searchLocalBranch: String = ""
-    @State var searchRemoteBranch: String = ""
+    @State private var searchLocalBranch: String = ""
+    @State private var searchRemoteBranch: String = ""
     @State var selectedBranch: String? = nil
-    @State private var error: String?
     
     var filteredLocalBranches: [String] {
         if searchLocalBranch.isEmpty {
@@ -42,17 +41,12 @@ struct BranchesView: View {
                 Spacer()
                 if let selected = selectedBranch, selected != viewModel.currentBranch {
                     BaseButton(title: "Switch to '\(selected)'") {
-                        self.error = nil
                         Task {
                             do {
-                                let result = try await viewModel.checkout(branch: selected, at: repo)
-                                if result.isSuccess == true {
-                                    selectedBranch = nil
-                                } else {
-                                    self.error = viewModel.errorMessage
-                                }
+                                let _ = try await viewModel.checkout(branch: selected, at: repo)
+                                selectedBranch = nil
                             } catch {
-                                self.error = error.localizedDescription
+                                viewModel.handleError(error)
                             }
                         }
                     }
@@ -69,12 +63,6 @@ struct BranchesView: View {
                 .padding()
             }
             
-            if let error {
-                ErrorBannerView(message: error) {
-                    self.error = nil
-                }
-                .padding(.horizontal)
-            }
             
             HStack {
                 VStack(alignment: .leading, spacing: 10) {

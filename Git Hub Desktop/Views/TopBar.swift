@@ -13,9 +13,7 @@ struct TopBar: View {
     let viewModel: MainViewModel
     let coordinator: AppCoordinator
     
-    @State private var error: String?
-    @State private var showForcePushAlert = false
-    @State private var pushErrorMessage = ""
+
 
     var body: some View {
         if let repo = repo {
@@ -33,7 +31,7 @@ struct TopBar: View {
                                     do {
                                         try await viewModel.checkout(branch: branch, at: repo)
                                     } catch {
-                                        self.error = error.localizedDescription
+                                        viewModel.handleError(error)
                                     }
                                 }
                             } label: {
@@ -64,63 +62,33 @@ struct TopBar: View {
                     Spacer()
                     
                     BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
-                        self.error = nil
                         Task {
                             do {
                                 _ = try await viewModel.fetch(at: repo)
                             } catch {
-                                self.error = error.localizedDescription
+                                viewModel.handleError(error)
                             }
                         }
                     }
                     BaseButton(title: "Pull", image: Image(.pull)) {
-                        self.error = nil
                         Task {
                             do {
                                 _ = try await viewModel.pull(at: repo)
                             } catch {
-                                self.error = error.localizedDescription
+                                viewModel.handleError(error)
                             }
                         }
                     }
                     ProminentBaseButton(title: (!viewModel.hasUpstream ? "Publish branch" : "Push") + (viewModel.unPushedCommits != 0 ? " (\(viewModel.unPushedCommits))" : ""), image: Image(.push)) {
-                        self.error = nil
                         Task {
                             do {
                                 _ = try await viewModel.push(at: repo)
                             } catch {
-                                self.pushErrorMessage = error.localizedDescription
-                                self.showForcePushAlert = true
+                                viewModel.handleError(error)
                             }
                         }
                     }
                 }
-                
-                if let error {
-                    ErrorBannerView(message: error) {
-                        self.error = nil
-                    }
-                }
-            }
-            .alert(
-                "Push Failed",
-                isPresented: $showForcePushAlert
-            ) {
-                Button("Force Push", role: .destructive) {
-                    self.error = nil
-                    Task {
-                        do {
-                            _ = try await viewModel.forcePush(at: repo)
-                        } catch {
-                            self.error = error.localizedDescription
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) {
-                    self.error = pushErrorMessage
-                }
-            } message: {
-                Text("\(pushErrorMessage)\n\nWould you like to force push to overwrite the remote branch?")
             }
         } else {
             HStack (alignment: .center){
