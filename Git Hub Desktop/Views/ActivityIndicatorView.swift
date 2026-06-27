@@ -25,7 +25,7 @@ struct AQILoaderView: View {
             systemName: "aqi.medium",
             variableValue: variableValue
         )
-        .font(.system(size: size))
+        .appFont(size: size)
         .task {
             await startLoadingAnimation()
         }

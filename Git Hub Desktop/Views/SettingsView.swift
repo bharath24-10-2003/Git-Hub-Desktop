@@ -30,7 +30,7 @@ struct SettingsView: View {
 
 struct AppearanceSettingsView: View {
     @AppStorage("appTheme") private var appTheme = AppTheme.system
-    @AppStorage("appFontStyle") private var appFontStyle = AppFontStyle.system
+    @AppStorage("appFontFamily") private var appFontFamily = "System"
     
     var body: some View {
         Form {
@@ -41,9 +41,9 @@ struct AppearanceSettingsView: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             
-            Picker("Font Style", selection: $appFontStyle) {
-                ForEach(AppFontStyle.allCases) { style in
-                    Text(style.rawValue).tag(style)
+            Picker("Font Family", selection: $appFontFamily) {
+                ForEach(AppFontManager.shared.availableFonts, id: \.self) { font in
+                    Text(font).tag(font)
                 }
             }
             .pickerStyle(MenuPickerStyle())
@@ -113,7 +113,7 @@ struct AuthSettingsView: View {
             SecureField("Personal Access Token", text: $token)
             
             Text("Your token will be securely saved in the macOS Keychain and automatically used by Git for HTTPS operations.")
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
             
@@ -121,7 +121,7 @@ struct AuthSettingsView: View {
                 if let message {
                     Text(message)
                         .foregroundColor(message.contains("Failed") ? .red : .green)
-                        .font(.caption)
+                        .appFont(.caption)
                 }
                 Spacer()
                 Button("Register Token") {

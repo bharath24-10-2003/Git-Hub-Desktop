@@ -22,7 +22,7 @@ struct Sidebar: View {
             
             VStack(alignment: .leading)  {
                 Text("REPOSITORIES")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.secondary)
                 
                 ScrollView([.vertical]) {
@@ -37,6 +37,7 @@ struct Sidebar: View {
                                 HStack {
                                     Image(systemName: "folder")
                                     Text(repo.name)
+                                        .appFont(.body)
                                     Spacer()
                                 }
                                 .padding(10)
@@ -79,7 +80,7 @@ struct Sidebar: View {
                             }
                             .padding(8)
                             .contentShape(Rectangle())
-                            .font(.subheadline)
+                            .appFont(.subheadline)
                             .fontWeight(.medium)
                             .foregroundStyle(.blue)
                             .background(Color.blue.opacity(0.06))
@@ -98,7 +99,7 @@ struct Sidebar: View {
                             }
                             .padding(8)
                             .contentShape(Rectangle())
-                            .font(.subheadline)
+                            .appFont(.subheadline)
                             .fontWeight(.medium)
                             .foregroundStyle(.blue)
                             .background(Color.blue.opacity(0.06))
@@ -116,7 +117,7 @@ struct Sidebar: View {
                 .padding(.vertical)
             
             Text("VIEWS")
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundStyle(.secondary)
             
             VStack(spacing: 4) {
@@ -138,6 +139,7 @@ struct Sidebar: View {
                         HStack {
                             Image(systemName: section.icon)
                             Text(section.title)
+                                .appFont(.body)
                             Spacer()
                         }
                         .padding(10)

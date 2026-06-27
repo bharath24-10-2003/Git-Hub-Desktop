@@ -23,10 +23,10 @@ struct MergeAssistantModal: View {
                 HStack {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.trianglehead.branch")
-                            .font(.title2)
+                            .appFont(.title2)
                             .foregroundStyle(.orange)
                         Text("Merge in Progress")
-                            .font(.title2)
+                            .appFont(.title2)
                             .bold()
                     }
                     Spacer()
@@ -34,14 +34,14 @@ struct MergeAssistantModal: View {
                         coordinator.dismissSheet()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
+                            .appFont(.title2)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
                 
                 Text("Merging branch '\(viewModel.mergeState.sourceBranch)' into '\(viewModel.mergeState.targetBranch.isEmpty ? repo.currentBranch : viewModel.mergeState.targetBranch)'")
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .padding()
@@ -65,7 +65,7 @@ struct MergeAssistantModal: View {
                 // Left: Conflicted Files List
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Conflicted Files")
-                        .font(.headline)
+                        .appFont(.headline)
                         .padding(.horizontal)
                         .padding(.vertical, 8)
                     
@@ -77,10 +77,10 @@ struct MergeAssistantModal: View {
                                 VStack(spacing: 10) {
                                     Spacer()
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.largeTitle)
+                                        .appFont(.largeTitle)
                                         .foregroundStyle(.green)
                                     Text("No conflicted files found")
-                                        .font(.subheadline)
+                                        .appFont(.subheadline)
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                 }
@@ -109,10 +109,10 @@ struct MergeAssistantModal: View {
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "doc.text.magnifyingglass")
-                                .font(.largeTitle)
+                                .appFont(.largeTitle)
                                 .foregroundStyle(.secondary)
                             Text("Select a file to resolve conflicts")
-                                .font(.headline)
+                                .appFont(.headline)
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -158,10 +158,10 @@ struct MergeAssistantModal: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Merge Action:")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.secondary)
                 Text("Resolve conflicts and stage files to finalize the merge.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .bold()
                 Spacer()
             }
@@ -170,7 +170,7 @@ struct MergeAssistantModal: View {
                 Image(systemName: "info.circle")
                     .foregroundStyle(.secondary)
                 Text(viewModel.mergeState.defaultCommitMessage.isEmpty ? "Merge branch '\(viewModel.mergeState.sourceBranch)'" : viewModel.mergeState.defaultCommitMessage)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .lineLimit(1)
                     .italic()
                 Spacer()
@@ -195,10 +195,10 @@ struct MergeAssistantModal: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .fontWeight(.semibold)
                 Text(file.path)
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -207,7 +207,7 @@ struct MergeAssistantModal: View {
             // Status Pill
             if file.isStaged {
                 Text("Staged")
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -216,7 +216,7 @@ struct MergeAssistantModal: View {
                     .clipShape(Capsule())
             } else if isResolved {
                 Text("Resolved")
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -225,7 +225,7 @@ struct MergeAssistantModal: View {
                     .clipShape(Capsule())
             } else {
                 Text("Unresolved")
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -248,9 +248,9 @@ struct MergeAssistantModal: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                        .font(.headline)
+                        .appFont(.headline)
                     Text(file.path)
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -305,15 +305,15 @@ struct MergeAssistantModal: View {
     private var commitMessageSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Commit Message Customizer")
-                .font(.headline)
+                .appFont(.headline)
                 .foregroundStyle(.green)
             Text("All conflicted files have been resolved and staged. Customize the merge commit message before continuing if needed:")
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundStyle(.secondary)
             
             TextField("Commit Message", text: $editedMessage)
                 .textFieldStyle(.plain)
-                .font(Font.system(size: 13, weight: .regular))
+                .appFont(size: 13, weight: .regular)
                 .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 6)

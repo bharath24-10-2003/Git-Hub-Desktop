@@ -22,9 +22,9 @@ struct TopBar: View {
             VStack(spacing: 8) {
                 HStack (alignment: .center){
                     Text(repo.name)
-                        .font(Font.system(size: 18, weight: .semibold))
+                        .appFont(size: 18, weight: .semibold)
                     Text("/")
-                        .font(Font.system(size: 14, weight: .light))
+                        .appFont(size: 14, weight: .light)
                         .opacity(0.5)
                     Menu {
                         ForEach(viewModel.localBranches, id: \.self) { branch in
@@ -123,7 +123,7 @@ struct TopBar: View {
         } else {
             HStack (alignment: .center){
                 Text("Clone or Choose a repository")
-                    .font(Font.system(size: 18, weight: .semibold))
+                    .appFont(size: 18, weight: .semibold)
                 Spacer()
                 BaseButton(title: "Clone a Repo") {
                     coordinator.presentClone()

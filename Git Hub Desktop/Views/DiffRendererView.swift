@@ -21,12 +21,12 @@ struct DiffRendererView: View {
             // Header
             HStack {
                 Text(file.path)
-                    .font(.headline)
+                    .appFont(.headline)
                     .padding()
                 Spacer()
                 if diff.isNewFile {
                     Text("New File")
-                        .font(.caption)
+                        .appFont(.caption)
                         .padding(4)
                         .background(Color.green.opacity(0.2))
                         .cornerRadius(4)
@@ -34,7 +34,7 @@ struct DiffRendererView: View {
                 }
                 if diff.isDeletedFile {
                     Text("Deleted File")
-                        .font(.caption)
+                        .appFont(.caption)
                         .padding(4)
                         .background(Color.red.opacity(0.2))
                         .cornerRadius(4)
@@ -82,6 +82,7 @@ struct DiffLineView: View {
     let language: String
     
     @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appFontFamily") var appFontFamily = "System"
     
     // Asynchronous highlighting state
     @State private var highlightedString: AttributedString?
@@ -100,7 +101,7 @@ struct DiffLineView: View {
                     .padding(.trailing, 8)
                     .foregroundColor(.secondary)
             }
-            .font(.system(.caption, design: .monospaced))
+            .appFont(.caption, design: .monospaced)
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
             
             // Code
@@ -112,7 +113,7 @@ struct DiffLineView: View {
                         .foregroundColor(textColor(for: line.type))
                 }
             }
-            .font(.system(.subheadline, design: .monospaced))
+            .appFont(.subheadline, design: .monospaced)
             .textSelection(.enabled)
             .padding(.leading, 8)
             .padding(.vertical, 1)
@@ -146,7 +147,11 @@ struct DiffLineView: View {
                 
                 var highlighted = AttributedString(result)
                 // Adjust font size since highlighter might set its own
-                highlighted.font = .system(size: 13, design: .monospaced)
+                if appFontFamily == "System" || appFontFamily.isEmpty {
+                    highlighted.font = .system(size: 13, design: .monospaced)
+                } else {
+                    highlighted.font = .custom(appFontFamily, size: 13)
+                }
                 
                 // Append the highlighted code to the prefix
                 finalString.append(highlighted)
@@ -158,7 +163,11 @@ struct DiffLineView: View {
         
         // Fallback
         var fallbackStr = AttributedString(rawText)
-        fallbackStr.font = .system(size: 13, design: .monospaced)
+        if appFontFamily == "System" || appFontFamily.isEmpty {
+            fallbackStr.font = .system(size: 13, design: .monospaced)
+        } else {
+            fallbackStr.font = .custom(appFontFamily, size: 13)
+        }
         self.highlightedString = fallbackStr
     }
     

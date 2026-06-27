@@ -29,17 +29,17 @@ struct CommitDiffDetailView: View {
                 HStack(spacing: 16) {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
-                            .font(.headline)
+                            .appFont(.headline)
                     }
                     .clipShape(Circle())
                     .buttonStyle(.borderedProminent)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
-                            .font(.title3)
+                            .appFont(.title3)
                             .bold()
                         Text("Hash: \(hash)")
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -176,7 +176,7 @@ struct CommitFileRowView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Text(file.status)
-                .font(.caption2)
+                .appFont(.caption2)
                 .bold()
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)

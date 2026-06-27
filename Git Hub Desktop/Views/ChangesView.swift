@@ -64,10 +64,10 @@ struct ChangesView: View {
         HStack {
             VStack(alignment: .leading) {
                 Text("Cherry Pick in Progress")
-                    .font(.headline)
+                    .appFont(.headline)
                     .foregroundStyle(.orange)
                 Text("Resolve conflicts and stage files to continue, or abort/skip.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -119,10 +119,10 @@ struct ChangesView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                     Text("Rebase in Progress")
-                        .font(.headline)
+                        .appFont(.headline)
                 }
                 Text("This repository is currently in a rebasing state. Click the assistant button to resolve conflicts and continue.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -147,10 +147,10 @@ struct ChangesView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                     Text("Merge in Progress")
-                        .font(.headline)
+                        .appFont(.headline)
                 }
                 Text("This repository is currently in a merging state. Click the assistant button to resolve conflicts and continue.")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -174,7 +174,7 @@ struct ChangesView: View {
             HStack {
                 TextField("Enter commit message", text: $commitMessage)
                     .textFieldStyle(.plain)
-                    .font(Font.system(size: 14, weight: .regular))
+                    .appFont(size: 14, weight: .regular)
                     .padding(.leading)
                 SmallProminentButton(title: "Commit") {
                     guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -211,7 +211,7 @@ struct ChangesView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Modified Changes")
-                        .font(.headline)
+                        .appFont(.headline)
                     Spacer()
                     SmallButton(title: "Stash") {
                         coordinator.presentStash(for: repo)
@@ -341,11 +341,11 @@ struct NoChangesView : View {
     
         VStack {
             Image(systemName: "book.pages")
-                .font(.largeTitle)
+                .appFont(.largeTitle)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 8)
             Text("No changes done yet for commit")
-                .font(.headline)
+                .appFont(.headline)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -365,7 +365,7 @@ struct SmallProminentButton : View {
             Text(title)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)
-                .font(Font.system(size: 14, weight: .regular))
+                .appFont(size: 14, weight: .regular)
         }
         .buttonStyle(.borderedProminent)
         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -386,7 +386,7 @@ struct SmallButton : View {
             Text(title)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)
-                .font(Font.system(size: 14, weight: .regular))
+                .appFont(size: 14, weight: .regular)
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .tint(tint)
@@ -401,10 +401,10 @@ struct TitleView: View {
     var body: some View {
         VStack(alignment: .leading) {
             Text(title)
-                .font(Font.system(size: 24, weight: .semibold))
+                .appFont(size: 24, weight: .semibold)
                 .padding(.bottom,4)
             Text(desc)
-                .font(Font.system(size: 14, weight: .regular))
+                .appFont(size: 14, weight: .regular)
                 .opacity(0.7)
         }
         .padding(.vertical, 24)
@@ -447,15 +447,15 @@ struct ChangedFileRowView: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                        .font(.subheadline)
+                        .appFont(.subheadline)
                         .fontWeight(.medium)
                     HStack(spacing: 6) {
                         Text(file.status)
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(statusColor(for: file.status).opacity(0.8))
                         
                         Text(file.isStaged ? "● Staged" : "○ Unstaged")
-                            .font(.caption2)
+                            .appFont(.caption2)
                             .fontWeight(.bold)
                             .foregroundStyle(file.isStaged ? Color.green : Color.red)
                     }
@@ -496,7 +496,7 @@ struct ChangedFileRowView: View {
                 
                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .foregroundStyle(isSelected ? .blue : .secondary)
-                    .font(Font.system(size: 16))
+                    .appFont(size: 16)
                     .padding(4)
                     .contentShape(Rectangle())
                     .onTapGesture {

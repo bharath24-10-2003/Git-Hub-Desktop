@@ -11,13 +11,11 @@ import SwiftUI
 struct Git_Hub_DesktopApp: App {
     @State private var coordinator = AppCoordinator()
     @AppStorage("appTheme") private var appTheme = AppTheme.system
-    @AppStorage("appFontStyle") private var appFontStyle = AppFontStyle.system
     
     var body: some Scene {
         WindowGroup {
             ContentView(coordinator: coordinator)
                 .preferredColorScheme(appTheme.colorScheme)
-                .fontDesign(appFontStyle.fontDesign)
         }
         
 #if os(macOS)

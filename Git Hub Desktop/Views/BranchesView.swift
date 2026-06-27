@@ -81,7 +81,7 @@ struct BranchesView: View {
                     HStack {
                         Image(systemName: "pc")
                         Text("Local Branch")
-                            .font(Font.system(size: 14, weight: .semibold))
+                            .appFont(size: 14, weight: .semibold)
                         Text("\(viewModel.localBranches.count)")
                             .padding(.vertical, 2)
                             .padding(.horizontal, 10)
@@ -139,7 +139,7 @@ struct BranchesView: View {
                                 } preview: {
                                     VStack(alignment: .leading, spacing: 10) {
                                         Text(branch)
-                                            .font(Font.system(size: 16, weight: .semibold))
+                                            .appFont(size: 16, weight: .semibold)
                                     }
                                     .padding(10)
                                 }
@@ -157,7 +157,7 @@ struct BranchesView: View {
                     HStack {
                         Image(systemName: "cloud.fill")
                         Text("Remote Branch")
-                            .font(Font.system(size: 14, weight: .semibold))
+                            .appFont(size: 14, weight: .semibold)
                         Text("\(viewModel.remoteBranches.count)")
                             .padding(.vertical, 2)
                             .padding(.horizontal, 10)
@@ -216,7 +216,7 @@ struct BranchesView: View {
                                 } preview: {
                                     VStack(alignment: .leading, spacing: 10) {
                                         Text(branch)
-                                            .font(Font.system(size: 16, weight: .semibold))
+                                            .appFont(size: 16, weight: .semibold)
                                     }
                                     .padding(10)
                                 }
@@ -275,14 +275,14 @@ struct BranchText: View {
     var body: some View {
         HStack {
             Image(systemName: "arrow.trianglehead.branch")
-                .font(Font.system(size: 14, weight: .semibold))
+                .appFont(size: 14, weight: .semibold)
             Text(branchName)
-                .font(Font.system(size: 14, weight: .semibold,design: .rounded))
+                .appFont(size: 14, weight: .semibold, design: .rounded)
                 .underline(color: isCurrent ? .blue : .clear)
             Spacer()
             if isCurrent {
                 Text("current")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.blue)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)

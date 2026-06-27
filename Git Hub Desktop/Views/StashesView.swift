@@ -169,26 +169,26 @@ struct SingleStashView: View {
 
                 Text(stashIndex)
                     .frame(width: 44, height: 44)
-                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .appFont(.title3, weight: .bold, design: .rounded)
                     .background(Circle().opacity(0.15))
 
                 VStack(alignment: .leading, spacing: 4) {
 
                     Text(stash.message)
-                        .font(.headline)
+                        .appFont(.headline)
                         .lineLimit(2)
 
                     HStack(spacing: 8) {
 
                         Text(stash.branch)
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(.secondary)
 
                         Text("•")
                             .foregroundStyle(.secondary)
 
                         Text(stash.type)
-                            .font(.caption)
+                            .appFont(.caption)
                             .foregroundStyle(stash.type == "WIP on" ? .orange : .blue)
                     }
                 }
@@ -278,11 +278,11 @@ struct NoStashView : View {
     
         VStack {
             Image(systemName: "xmark.bin")
-                .font(.largeTitle)
+                .appFont(.largeTitle)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 8)
             Text("No stashes found in this Repository")
-                .font(.headline)
+                .appFont(.headline)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -105,7 +105,7 @@ struct HistoryCommitView: View {
                 }
                 VStack(alignment: .leading) {
                     Text(commit.message)
-                        .font(Font.system(size: 14,weight: .semibold))
+                        .appFont(size: 14, weight: .semibold)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 4) {
@@ -115,14 +115,14 @@ struct HistoryCommitView: View {
                                 Text("•")
                                 Text(commit.timeAgo)
                             }
-                            .font(Font.system(size: 11, weight: .medium))
+                            .appFont(size: 11, weight: .medium)
                             .foregroundStyle(.secondary)
                             HStack(spacing: 4) {
                                 Text(commit.displayDate)
                                 Text("•")
                                 Text(commit.displayTime)
                             }
-                            .font(Font.system(size: 10, weight: .regular))
+                            .appFont(size: 10, weight: .regular)
                             .foregroundStyle(.tertiary)
                         }
                         .padding(.trailing, 24)
@@ -131,7 +131,7 @@ struct HistoryCommitView: View {
                             NSPasteboard.general.setString(commit.id, forType: .string)
                         } label: {
                             Text (commit.shortHash)
-                                .font(.caption)
+                                .appFont(.caption)
                                 .frame(width: 60)
                         }
                     }
@@ -248,7 +248,7 @@ struct HistoryCommitView: View {
     private var fallbackAvatar: some View {
         Text(authorInitial)
             .frame(width: 44, height: 44)
-            .font(Font.system(size: 18, weight: .bold, design: .rounded))
+            .appFont(size: 18, weight: .bold, design: .rounded)
             .background(Circle().opacity(0.15))
             .clipShape(Circle())
     }

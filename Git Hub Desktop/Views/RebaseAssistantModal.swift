@@ -23,10 +23,10 @@ struct RebaseAssistantModal: View {
                 HStack {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.trianglehead.branch")
-                            .font(.title2)
+                            .appFont(.title2)
                             .foregroundStyle(.orange)
                         Text("Rebase in Progress")
-                            .font(.title2)
+                            .appFont(.title2)
                             .bold()
                     }
                     Spacer()
@@ -34,14 +34,14 @@ struct RebaseAssistantModal: View {
                         coordinator.dismissSheet()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
+                            .appFont(.title2)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
                 
                 Text("Rebasing branch '\(viewModel.rebaseState.headName)' onto '\(viewModel.rebaseState.ontoBranch.isEmpty ? repo.currentBranch : viewModel.rebaseState.ontoBranch)'")
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .padding()
@@ -65,7 +65,7 @@ struct RebaseAssistantModal: View {
                 // Left: Conflicted Files List
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Conflicted Files")
-                        .font(.headline)
+                        .appFont(.headline)
                         .padding(.horizontal)
                         .padding(.vertical, 8)
                     
@@ -77,10 +77,10 @@ struct RebaseAssistantModal: View {
                                 VStack(spacing: 10) {
                                     Spacer()
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.largeTitle)
+                                        .appFont(.largeTitle)
                                         .foregroundStyle(.green)
                                     Text("No conflicted files found")
-                                        .font(.subheadline)
+                                        .appFont(.subheadline)
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                 }
@@ -109,10 +109,10 @@ struct RebaseAssistantModal: View {
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "doc.text.magnifyingglass")
-                                .font(.largeTitle)
+                                .appFont(.largeTitle)
                                 .foregroundStyle(.secondary)
                             Text("Select a file to resolve conflicts")
-                                .font(.headline)
+                                .appFont(.headline)
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -158,16 +158,16 @@ struct RebaseAssistantModal: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Replaying Commit:")
-                    .font(.caption)
+                    .appFont(.caption)
                     .foregroundStyle(.secondary)
                 if !viewModel.rebaseState.currentCommitHash.isEmpty {
                     Text(viewModel.rebaseState.currentCommitHash.prefix(7))
-                        .font(.system(.caption, design: .monospaced))
+                        .appFont(.caption, design: .monospaced)
                         .bold()
                 }
                 Spacer()
                 Text("Step \(viewModel.rebaseState.currentProgress) of \(viewModel.rebaseState.totalProgress)")
-                    .font(.caption)
+                    .appFont(.caption)
                     .bold()
             }
             
@@ -180,7 +180,7 @@ struct RebaseAssistantModal: View {
                 Image(systemName: "quote.opening")
                     .foregroundStyle(.secondary)
                 Text(viewModel.rebaseState.currentCommitMessage)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .lineLimit(1)
                     .italic()
                 Spacer()
@@ -205,10 +205,10 @@ struct RebaseAssistantModal: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .fontWeight(.semibold)
                 Text(file.path)
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -217,7 +217,7 @@ struct RebaseAssistantModal: View {
             // Status Pill
             if file.isStaged {
                 Text("Staged")
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -226,7 +226,7 @@ struct RebaseAssistantModal: View {
                     .clipShape(Capsule())
             } else if isResolved {
                 Text("Resolved")
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -235,7 +235,7 @@ struct RebaseAssistantModal: View {
                     .clipShape(Capsule())
             } else {
                 Text("Unresolved")
-                    .font(.caption2)
+                    .appFont(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -258,9 +258,9 @@ struct RebaseAssistantModal: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                        .font(.headline)
+                        .appFont(.headline)
                     Text(file.path)
-                        .font(.caption)
+                        .appFont(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -315,15 +315,15 @@ struct RebaseAssistantModal: View {
     private var commitMessageSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Commit Message Customizer")
-                .font(.headline)
+                .appFont(.headline)
                 .foregroundStyle(.green)
             Text("All conflicted files have been resolved and staged. Customize the commit message before continuing if needed:")
-                .font(.caption)
+                .appFont(.caption)
                 .foregroundStyle(.secondary)
             
             TextField("Commit Message", text: $editedMessage)
                 .textFieldStyle(.plain)
-                .font(Font.system(size: 13, weight: .regular))
+                .appFont(size: 13, weight: .regular)
                 .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 6)

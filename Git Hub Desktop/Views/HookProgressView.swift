@@ -9,7 +9,7 @@ struct HookProgressView: View {
             // Header
             HStack {
                 Text(loadingMessage)
-                    .font(.headline)
+                    .appFont(.headline)
                 Spacer()
                 AQILoaderView()
                     .frame(width: 20, height: 20)
@@ -69,14 +69,14 @@ struct HookTaskRow: View {
                     .frame(width: 20)
                 
                 Text(task.name)
-                    .font(.subheadline)
+                    .appFont(.subheadline)
                     .fontWeight(.medium)
                 
                 Spacer()
                 
                 if task.status == .failed || task.status == .skipped {
                     Text(String(describing: task.status).capitalized)
-                        .font(.caption2)
+                        .appFont(.caption2)
                         .foregroundStyle(task.status.color)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -89,7 +89,7 @@ struct HookTaskRow: View {
                 VStack(alignment: .leading) {
                     ForEach(task.rawOutput, id: \.self) { line in
                         Text(line)
-                            .font(.system(.caption, design: .monospaced))
+                            .appFont(.caption, design: .monospaced)
                             .foregroundStyle(.secondary)
                     }
                 }

@@ -18,7 +18,7 @@ struct LoadingView: View {
                 .frame(width: 80, height: 80)
             
             Text(loadingMessage)
-                .font(.headline)
+                .appFont(.headline)
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
