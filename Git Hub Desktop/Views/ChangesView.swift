@@ -341,7 +341,7 @@ struct NoChangesView : View {
     
         VStack {
             Image(systemName: "book.pages")
-                .font(.system(size: 40))
+                .font(.largeTitle)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 8)
             Text("No changes done yet for commit")
@@ -447,14 +447,16 @@ struct ChangedFileRowView: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                     HStack(spacing: 6) {
                         Text(file.status)
                             .font(.caption)
                             .foregroundStyle(statusColor(for: file.status).opacity(0.8))
                         
                         Text(file.isStaged ? "● Staged" : "○ Unstaged")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.caption2)
+                            .fontWeight(.bold)
                             .foregroundStyle(file.isStaged ? Color.green : Color.red)
                     }
                 }

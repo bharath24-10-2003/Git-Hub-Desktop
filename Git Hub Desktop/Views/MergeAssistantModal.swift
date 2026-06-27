@@ -77,7 +77,7 @@ struct MergeAssistantModal: View {
                                 VStack(spacing: 10) {
                                     Spacer()
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 32))
+                                        .font(.largeTitle)
                                         .foregroundStyle(.green)
                                     Text("No conflicted files found")
                                         .font(.subheadline)
@@ -109,7 +109,7 @@ struct MergeAssistantModal: View {
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "doc.text.magnifyingglass")
-                                .font(.system(size: 40))
+                                .font(.largeTitle)
                                 .foregroundStyle(.secondary)
                             Text("Select a file to resolve conflicts")
                                 .font(.headline)
@@ -195,9 +195,10 @@ struct MergeAssistantModal: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.path.split(separator: "/").last.map(String.init) ?? file.path)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                 Text(file.path)
-                    .font(.system(size: 10))
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -206,7 +207,8 @@ struct MergeAssistantModal: View {
             // Status Pill
             if file.isStaged {
                 Text("Staged")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2)
+                    .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.blue.opacity(0.15))
@@ -214,7 +216,8 @@ struct MergeAssistantModal: View {
                     .clipShape(Capsule())
             } else if isResolved {
                 Text("Resolved")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2)
+                    .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.green.opacity(0.15))
@@ -222,7 +225,8 @@ struct MergeAssistantModal: View {
                     .clipShape(Capsule())
             } else {
                 Text("Unresolved")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2)
+                    .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.red.opacity(0.15))

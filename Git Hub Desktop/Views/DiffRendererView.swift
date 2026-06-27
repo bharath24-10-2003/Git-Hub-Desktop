@@ -100,7 +100,7 @@ struct DiffLineView: View {
                     .padding(.trailing, 8)
                     .foregroundColor(.secondary)
             }
-            .font(.system(size: 12, design: .monospaced))
+            .font(.system(.caption, design: .monospaced))
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
             
             // Code
@@ -112,7 +112,7 @@ struct DiffLineView: View {
                         .foregroundColor(textColor(for: line.type))
                 }
             }
-            .font(.system(size: 13, design: .monospaced))
+            .font(.system(.subheadline, design: .monospaced))
             .textSelection(.enabled)
             .padding(.leading, 8)
             .padding(.vertical, 1)

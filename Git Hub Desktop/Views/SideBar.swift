@@ -79,7 +79,8 @@ struct Sidebar: View {
                             }
                             .padding(8)
                             .contentShape(Rectangle())
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                             .foregroundStyle(.blue)
                             .background(Color.blue.opacity(0.06))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -97,7 +98,8 @@ struct Sidebar: View {
                             }
                             .padding(8)
                             .contentShape(Rectangle())
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                             .foregroundStyle(.blue)
                             .background(Color.blue.opacity(0.06))
                             .clipShape(RoundedRectangle(cornerRadius: 8))

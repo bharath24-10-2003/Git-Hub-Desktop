@@ -30,7 +30,7 @@ struct BodyView: View {
             } else {
                 VStack(spacing: 20) {
                     Image(systemName: "folder.badge.questionmark")
-                        .font(.system(size: 60))
+                        .font(.largeTitle)
                         .foregroundStyle(.secondary)
                     Text("Select or Add a Repository")
                         .font(.title2)

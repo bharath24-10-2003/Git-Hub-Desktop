@@ -31,13 +31,13 @@ struct CloneModal: View {
                 .padding(.vertical)
             
             Text("Git Repository URL")
-                .font(Font.system(size: 14,weight: .semibold,design: .default))
+                .font(.headline)
             
             CustomTextField(url: $url, imageName: "link", placeholder: "https://github.com/user/repo.git")
                 .padding(.bottom, 20)
 
             Text("Choose local destination path")
-                .font(Font.system(size: 14,weight: .semibold,design: .default))
+                .font(.headline)
             HStack (alignment:.center) {
                 
                 CustomTextField(url: $path, imageName: "folder", placeholder: "/path/to/folder")
@@ -160,7 +160,7 @@ struct AddRepoModal: View {
                 .padding(.vertical)
 
             Text("Choose a path")
-                .font(Font.system(size: 14,weight: .semibold,design: .default))
+                .font(.headline)
             HStack (alignment:.center) {
                 
                 CustomTextField(url: $path, imageName: "folder", placeholder: "/path/to/repo")
@@ -207,7 +207,7 @@ struct CustomTextField: View {
                 background
             )
             .textFieldStyle(.plain)
-            .font(Font.system(size: 14,weight: .regular,design: .default))
+            .font(.body)
     }
     
     var background: some View {
@@ -239,22 +239,21 @@ struct BaseButton: View {
                 image
                     .resizable()
                     .frame(width: imageSize.width, height: imageSize.height)
-                    .padding(.trailing, -8)
-                    .padding(.leading, 16)
-                    .font(Font.system(size: 14, weight: .bold, design: .default))
+                    .padding(.trailing, -6)
+                    .padding(.leading, 13)
+                    .font(.headline)
             }
             Text(title)
-                .font(Font.system(size: 14, weight: .medium, design: .none))
-                .padding(.horizontal,16)
-                .padding(.vertical,8)
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal,13)
+                .padding(.vertical,6)
                 .foregroundColor(textTint)
         }
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .frame(height: 36)
+        .controlSize(.regular)
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-                .frame(height: 42)
         }
         .buttonStyle(.bordered)
     }
@@ -275,23 +274,22 @@ struct ProminentBaseButton: View{
                 image
                     .resizable()
                     .frame(width: 16,height: 16)
-                    .padding(.trailing, -8)
-                    .padding(.leading, 16)
+                    .padding(.trailing, -6)
+                    .padding(.leading, 13)
                     .tint(.white)
-                    .font(Font.system(size: 14, weight: .bold, design: .default))
+                    .font(.headline)
             }
             Text(title)
-                .font(Font.system(size: 14, weight: .medium, design: .none))
-                .padding(.horizontal,16)
-                .padding(.vertical,8)
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal,13)
+                .padding(.vertical,6)
                 .foregroundColor(textTint)
         }
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .frame(height: 36)
+        .controlSize(.regular)
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-                .frame(height: 42)
         }
         .buttonStyle(.borderedProminent)
     }
@@ -304,10 +302,10 @@ struct ModalDescription: View {
     var body: some View {
         VStack(alignment: .leading) {
             Text(title)
-                .font(Font.system(size: 24, weight: .semibold, design: .default))
+                .font(.title2.weight(.semibold))
                 .padding(.bottom, 4)
             Text(description)
-                .font(Font.system(size: 14,weight: .regular,design: .default))
+                .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
                 .opacity(0.7)
         }
@@ -324,9 +322,9 @@ struct ErrorBannerView: View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.red)
-                .font(.system(size: 14))
+                .font(.body)
             Text(message)
-                .font(.system(size: 13, weight: .medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.red)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
@@ -337,7 +335,7 @@ struct ErrorBannerView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.red.opacity(0.6))
-                        .font(.system(size: 14))
+                        .font(.body)
                 }
                 .buttonStyle(.plain)
             }
@@ -383,7 +381,7 @@ struct NewBranchModal: View {
                 .padding(.vertical)
             
             Text("Branch Name")
-                .font(Font.system(size: 14, weight: .semibold))
+                .font(.headline)
             
             CustomTextField(url: $branchName, imageName: "arrow.trianglehead.branch", placeholder: "feature/new-design")
                 .padding(.bottom, 20)
@@ -517,7 +515,7 @@ struct DeleteBranchModal: View {
                 
             Toggle("Force delete (unmerged changes will be lost)", isOn: $forceDelete)
                 .toggleStyle(.checkbox)
-                .font(Font.system(size: 14))
+                .font(.body)
                 .padding(.bottom, 20)
 
             HStack {

@@ -29,7 +29,7 @@ struct CommitDiffDetailView: View {
                 HStack(spacing: 16) {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.headline)
                     }
                     .clipShape(Circle())
                     .buttonStyle(.borderedProminent)
