@@ -133,6 +133,10 @@ struct CommitDiffDetailView: View {
         error = nil
         do {
             changedFiles = try await viewModel.getCommitFiles(hash: hash, at: repo)
+            if let firstFile = changedFiles.first {
+                activeSelectedFileId = firstFile.id
+                loadDiff(for: firstFile)
+            }
         } catch {
             self.error = error.localizedDescription
         }

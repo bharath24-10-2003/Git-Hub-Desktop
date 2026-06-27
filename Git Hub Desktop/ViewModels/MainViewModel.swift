@@ -159,7 +159,7 @@ class MainViewModel {
         let files = try await service.status(at: path)
         self.changedFiles = files
         
-        // Clear diff if selected file no longer exists
+        // Clear diff if selected file no longer exists or select first file
         if let selected = self.selectedFileForDiff {
             if let updatedFile = files.first(where: { $0.id == selected.id }) {
                 self.selectedFileForDiff = updatedFile
@@ -167,8 +167,22 @@ class MainViewModel {
                     try? await self.loadDiff(for: updatedFile, at: repo)
                 }
             } else {
-                self.selectedFileForDiff = nil
-                self.currentDiff = nil
+                if let firstFile = files.first {
+                    self.selectedFileForDiff = firstFile
+                    Task {
+                        try? await self.loadDiff(for: firstFile, at: repo)
+                    }
+                } else {
+                    self.selectedFileForDiff = nil
+                    self.currentDiff = nil
+                }
+            }
+        } else {
+            if let firstFile = files.first {
+                self.selectedFileForDiff = firstFile
+                Task {
+                    try? await self.loadDiff(for: firstFile, at: repo)
+                }
             }
         }
     }
