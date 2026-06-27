@@ -227,7 +227,7 @@ struct BaseButton: View {
     
     var title: String
     var image: Image? = nil
-    var textTint: Color = .white
+    var textTint: Color = .primary
     var imageSize: CGSize = CGSize(width: 16, height: 16)
     var action: (() -> Void)
     
@@ -241,14 +241,13 @@ struct BaseButton: View {
                     .frame(width: imageSize.width, height: imageSize.height)
                     .padding(.trailing, -8)
                     .padding(.leading, 16)
-                    .tint(.white)
                     .font(Font.system(size: 14, weight: .bold, design: .default))
             }
             Text(title)
                 .font(Font.system(size: 14, weight: .medium, design: .none))
                 .padding(.horizontal,16)
                 .padding(.vertical,8)
-                .tint(textTint)
+                .foregroundColor(textTint)
         }
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .frame(height: 36)
@@ -258,7 +257,6 @@ struct BaseButton: View {
                 .frame(height: 42)
         }
         .buttonStyle(.bordered)
-        .tint(.white)
     }
 }
 
@@ -266,7 +264,7 @@ struct ProminentBaseButton: View{
     
     var title: String
     var image: Image? = nil
-    var textTint: Color = .black
+    var textTint: Color = .white
     var action: (() -> Void)
     
     var body: some View {
@@ -286,7 +284,7 @@ struct ProminentBaseButton: View{
                 .font(Font.system(size: 14, weight: .medium, design: .none))
                 .padding(.horizontal,16)
                 .padding(.vertical,8)
-                .tint(textTint)
+                .foregroundColor(textTint)
         }
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .frame(height: 36)
@@ -638,7 +636,11 @@ struct HistoryCherryPickModal: View {
                 .padding(.horizontal)
             Divider()
             HStack {
-                BaseButton(title: "Cherry Pick") {
+                Spacer()
+                BaseButton(title: "Close") {
+                    coordinator.dismissSheet()
+                }
+                ProminentBaseButton(title: "Cherry Pick") {
                     self.cherryPickError = nil
                     Task {
                         do {
@@ -648,10 +650,6 @@ struct HistoryCherryPickModal: View {
                             self.cherryPickError = error.localizedDescription
                         }
                     }
-                }
-                .padding(.trailing, 24)
-                BaseButton(title: "Close") {
-                    coordinator.dismissSheet()
                 }
             }
             .padding()

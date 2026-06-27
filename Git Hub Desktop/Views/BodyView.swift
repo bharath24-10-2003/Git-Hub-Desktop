@@ -41,6 +41,5 @@ struct BodyView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .colorScheme(.light)
     }
 }

@@ -10,11 +10,12 @@ import SwiftUI
 @main
 struct Git_Hub_DesktopApp: App {
     @State private var coordinator = AppCoordinator()
+    @AppStorage("appTheme") private var appTheme = AppTheme.system
     
     var body: some Scene {
         WindowGroup {
             ContentView(coordinator: coordinator)
-                .preferredColorScheme(.light)
+                .preferredColorScheme(appTheme.colorScheme)
         }
         
 #if os(macOS)

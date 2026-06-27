@@ -375,7 +375,7 @@ struct SmallProminentButton : View {
 struct SmallButton : View {
     
     let title: String
-    var tint: Color = .black
+    var tint: Color = .primary
     let action: () -> Void
 
     

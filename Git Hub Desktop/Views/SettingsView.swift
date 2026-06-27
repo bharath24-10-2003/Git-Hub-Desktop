@@ -8,6 +8,11 @@ import SwiftUI
 struct SettingsView: View {
     var body: some View {
         TabView {
+            AppearanceSettingsView()
+                .tabItem {
+                    Label("Appearance", systemImage: "paintpalette")
+                }
+                
             GitConfigSettingsView()
                 .tabItem {
                     Label("Git Config", systemImage: "terminal")
@@ -22,6 +27,23 @@ struct SettingsView: View {
     }
 }
 
+
+struct AppearanceSettingsView: View {
+    @AppStorage("appTheme") private var appTheme = AppTheme.system
+    
+    var body: some View {
+        Form {
+            Picker("Appearance", selection: $appTheme) {
+                ForEach(AppTheme.allCases) { theme in
+                    Text(theme.rawValue).tag(theme)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding()
+        }
+        .padding(30)
+    }
+}
 
 struct GitConfigSettingsView: View {
     @State private var username: String = ""
