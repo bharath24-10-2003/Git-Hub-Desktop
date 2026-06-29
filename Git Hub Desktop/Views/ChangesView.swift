@@ -196,7 +196,7 @@ struct ChangesView: View {
                 }
             }
             .frame(maxWidth: 500)
-            .padding(8)
+            .padding(6)
             .overlay {
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(lineWidth: 1)
@@ -211,7 +211,8 @@ struct ChangesView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Modified Changes")
-                        .appFont(.headline)
+                        .appFont(.title2)
+                        .padding(.leading, 8)
                     Spacer()
                     SmallButton(title: "Stash") {
                         coordinator.presentStash(for: repo)
@@ -249,7 +250,7 @@ struct ChangesView: View {
                         }
                     }
                 }
-                .padding()
+                .padding(10)
                 
                 Divider()
                 HSplitView {
@@ -278,7 +279,7 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 400,maxWidth: 500)
+                    .frame(minWidth: 350,maxWidth: 500)
                     
                     if viewModel.selectedFileForDiff != nil {
                         // Right: Diff View
@@ -318,8 +319,6 @@ struct ChangesView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
-        .padding(.horizontal)
-        .padding(.bottom)
     }
     
     private func statusColor(for status: String) -> Color {
@@ -363,9 +362,9 @@ struct SmallProminentButton : View {
             action()
         } label: {
             Text(title)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .appFont(size: 14, weight: .regular)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 6)
+                .appFont(size: 12, weight: .regular)
         }
         .buttonStyle(.borderedProminent)
         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -407,8 +406,8 @@ struct TitleView: View {
                 .appFont(size: 14, weight: .regular)
                 .opacity(0.7)
         }
-        .padding(.vertical, 24)
-        .padding(.leading, 24)
+        .padding(.vertical, 12)
+        .padding(.leading, 12)
         Spacer()
     }
 }
