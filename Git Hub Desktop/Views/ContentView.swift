@@ -68,11 +68,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $coordinator.viewModel.isLoading) {
-            if coordinator.viewModel.isStreamingHooks {
-                HookProgressView(loadingMessage: coordinator.viewModel.loadingMessage, hookTasks: coordinator.viewModel.hookTasks)
-            } else {
-                LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
-            }
+            LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
         }
         .dialogIcon(Image(.branch))
         .onChange(of: coordinator.viewModel.selectedRepo) {

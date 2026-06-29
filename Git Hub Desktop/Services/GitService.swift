@@ -35,7 +35,7 @@ nonisolated final class GitService {
     
     // Core runner
     @discardableResult
-    func run(_ args: [String], at repoPath: String? = nil, stdin: Data? = nil, onOutput: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
+    func run(_ args: [String], at repoPath: String? = nil, stdin: Data? = nil) async throws -> GitResult {
         print("GitService: Running '/usr/bin/git \(args.joined(separator: " "))' at path: '\(repoPath ?? "default")'")
         
         let process = Process()
@@ -78,36 +78,16 @@ nonisolated final class GitService {
             }
         }
         
-        let outputTask = Task { () -> Data in
-            var allData = Data()
-            for try await line in outputPipe.fileHandleForReading.bytes.lines {
-                let text = line + "\n"
-                if let onOutput {
-                    await MainActor.run { onOutput(text) }
-                }
-                if let data = text.data(using: .utf8) {
-                    allData.append(data)
-                }
-            }
-            return allData
+        let outputTask = Task {
+            outputPipe.fileHandleForReading.readDataToEndOfFile()
         }
         
-        let errorTask = Task { () -> Data in
-            var allData = Data()
-            for try await line in errorPipe.fileHandleForReading.bytes.lines {
-                let text = line + "\n"
-                if let onOutput {
-                    await MainActor.run { onOutput(text) }
-                }
-                if let data = text.data(using: .utf8) {
-                    allData.append(data)
-                }
-            }
-            return allData
+        let errorTask = Task {
+            errorPipe.fileHandleForReading.readDataToEndOfFile()
         }
         
-        let outputData = (try? await outputTask.value) ?? Data()
-        let errorData = (try? await errorTask.value) ?? Data()
+        let outputData = await outputTask.value
+        let errorData = await errorTask.value
         
         process.waitUntilExit()
         
@@ -189,21 +169,21 @@ nonisolated extension GitService {
     
     // Commit
     @discardableResult
-    func commit(message: String, at repo: String, onOutput: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
-        try await run(["commit", "-m", message], at: repo, onOutput: onOutput)
+    func commit(message: String, at repo: String) async throws -> GitResult {
+        try await run(["commit", "-m", message], at: repo)
     }
     
     // Push / Pull
     @discardableResult
-    func push(at repo: String, branch: String? = nil, setUpstream: Bool = false, onOutput: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
+    func push(at repo: String, branch: String? = nil, setUpstream: Bool = false) async throws -> GitResult {
         if let branch {
             if setUpstream {
-                return try await run(["push", "-u", "origin", branch], at: repo, onOutput: onOutput)
+                return try await run(["push", "-u", "origin", branch], at: repo)
             } else {
-                return try await run(["push", "origin", branch], at: repo, onOutput: onOutput)
+                return try await run(["push", "origin", branch], at: repo)
             }
         } else {
-            return try await run(["push"], at: repo, onOutput: onOutput)
+            return try await run(["push"], at: repo)
         }
     }
     
