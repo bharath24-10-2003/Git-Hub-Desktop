@@ -14,6 +14,8 @@ class MainViewModel {
     
     var service: GitService
     var store: RepoStore
+    var commandLogViewModel = GitCommandLogViewModel()
+    var useRichLog: Bool = false
     
     // MARK: - Reactive Repository States
     private var lastLoadedRepoId: UUID? = nil
@@ -373,9 +375,15 @@ class MainViewModel {
     @discardableResult
     func commitChanges(message: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Committing changes..."
+        self.commandLogViewModel.start(title: "Commit")
+        self.useRichLog = true
         self.isLoading = true
-        defer { self.isLoading = false }
-        let result = try await service.commit(message: message, at: repo.path)
+        defer { 
+            self.isLoading = false
+            self.useRichLog = false
+            self.commandLogViewModel.finish()
+        }
+        let result = try await service.commit(message: message, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
@@ -386,9 +394,13 @@ class MainViewModel {
     @discardableResult
     func fetch(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Fetching updates..."
+        self.commandLogViewModel.start(title: "Fetch")
         self.isLoading = true
-        defer { self.isLoading = false }
-        let result = try await service.fetch(at: repo.path)
+        defer { 
+            self.isLoading = false
+            self.commandLogViewModel.finish()
+        }
+        let result = try await service.fetch(at: repo.path, onOutput: progressHandler, onError: progressHandler)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
@@ -399,13 +411,17 @@ class MainViewModel {
     @discardableResult
     func pull(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pulling changes..."
+        self.commandLogViewModel.start(title: "Pull")
         self.isLoading = true
-        defer { self.isLoading = false }
+        defer { 
+            self.isLoading = false
+            self.commandLogViewModel.finish()
+        }
         let result: GitResult
         if !currentBranch.isEmpty {
-            result = try await service.pull(branch: currentBranch, at: repo.path)
+            result = try await service.pull(branch: currentBranch, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         } else {
-            result = try await service.pull(at: repo.path)
+            result = try await service.pull(at: repo.path, onOutput: progressHandler, onError: progressHandler)
         }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -417,13 +433,17 @@ class MainViewModel {
     @discardableResult
     func pull(name: String, rebase: Bool = false, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pulling changes..."
+        self.commandLogViewModel.start(title: "Pull")
         self.isLoading = true
-        defer { self.isLoading = false }
+        defer { 
+            self.isLoading = false
+            self.commandLogViewModel.finish()
+        }
         let result: GitResult
         if rebase {
-            result = try await service.pull(branch: name, rebase: true, at: repo.path)
+            result = try await service.pull(branch: name, rebase: true, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         } else {
-            result = try await service.pull(branch: name, at: repo.path)
+            result = try await service.pull(branch: name, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -467,13 +487,19 @@ class MainViewModel {
     @discardableResult
     func push(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pushing commits..."
+        self.commandLogViewModel.start(title: "Push")
+        self.useRichLog = true
         self.isLoading = true
-        defer { self.isLoading = false }
+        defer { 
+            self.isLoading = false
+            self.useRichLog = false
+            self.commandLogViewModel.finish()
+        }
         let result: GitResult
         if !currentBranch.isEmpty {
-            result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream)
+            result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream, onOutput: progressHandler, onError: progressHandler)
         } else {
-            result = try await service.push(at: repo.path)
+            result = try await service.push(at: repo.path, onOutput: progressHandler, onError: progressHandler)
         }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -485,8 +511,14 @@ class MainViewModel {
     @discardableResult
     func forcePush(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Force pushing commits..."
+        self.commandLogViewModel.start(title: "Force Push")
+        self.useRichLog = true
         self.isLoading = true
-        defer { self.isLoading = false }
+        defer { 
+            self.isLoading = false
+            self.useRichLog = false
+            self.commandLogViewModel.finish()
+        }
         let result = try await service.forcePush(at: repo.path)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -783,6 +815,16 @@ class MainViewModel {
             self.mergeState.defaultCommitMessage = message
         } catch {
             self.errorMessage = error.localizedDescription
+        }
+    }
+    
+    // MARK: - Progress Handler
+    
+    private var progressHandler: @Sendable (String) -> Void {
+        return { [weak self] output in
+            Task { @MainActor in
+                self?.commandLogViewModel.parseAndAppend(output)
+            }
         }
     }
 }

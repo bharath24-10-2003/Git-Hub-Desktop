@@ -35,8 +35,23 @@ nonisolated final class GitService {
     
     // Core runner
     @discardableResult
-    func run(_ args: [String], at repoPath: String? = nil, stdin: Data? = nil) async throws -> GitResult {
-        print("GitService: Running '/usr/bin/git \(args.joined(separator: " "))' at path: '\(repoPath ?? "default")'")
+    func run(
+        _ args: [String],
+        at repoPath: String? = nil,
+        stdin: Data? = nil,
+        onOutput: (@Sendable (String) -> Void)? = nil,
+        onError: (@Sendable (String) -> Void)? = nil
+    ) async throws -> GitResult {
+        var finalArgs = args
+        // Force Git to emit progress for long-running commands where appropriate
+        let commandsNeedingProgress = ["push", "pull", "fetch", "clone"]
+        if let firstArg = args.first, commandsNeedingProgress.contains(firstArg) {
+            if !finalArgs.contains("--progress") {
+                finalArgs.insert("--progress", at: 1)
+            }
+        }
+
+        print("GitService: Running '/usr/bin/git \(finalArgs.joined(separator: " "))' at path: '\(repoPath ?? "default")'")
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: gitPath)
@@ -44,13 +59,35 @@ nonisolated final class GitService {
         var env = ProcessInfo.processInfo.environment
         env["GIT_TERMINAL_PROMPT"] = "0"
         env["GIT_EDITOR"] = "true"
+        
+        // Ensure standard PATH is present for pre-commit hooks (like node, python, xcodebuild)
+        let defaultPaths = [
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin"
+        ].joined(separator: ":")
+        
+        if let currentPath = env["PATH"], !currentPath.isEmpty {
+            env["PATH"] = "\(defaultPaths):\(currentPath)"
+        } else {
+            env["PATH"] = defaultPaths
+        }
+        
+        // Attempt to supply a DEVELOPER_DIR if not present, to fix xcodebuild issues in hooks
+        if env["DEVELOPER_DIR"] == nil {
+            env["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
+        }
+        
         process.environment = env
         
         if let repoPath = repoPath {
             process.currentDirectoryURL = URL(fileURLWithPath: repoPath)
         }
         
-        process.arguments = args
+        process.arguments = finalArgs
         
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -58,41 +95,95 @@ nonisolated final class GitService {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
+        let inputPipe = Pipe()
         if let stdin = stdin {
-            let inputPipe = Pipe()
             process.standardInput = inputPipe
-            do {
-                try process.run()
+        }
+        
+        final class DataCollector: @unchecked Sendable {
+            private var data = Data()
+            private let lock = NSLock()
+            
+            func append(_ chunk: Data) {
+                lock.lock()
+                data.append(chunk)
+                lock.unlock()
+            }
+            
+            func get() -> Data {
+                lock.lock()
+                let copy = data
+                lock.unlock()
+                return copy
+            }
+        }
+        
+        let outputDataRef = DataCollector()
+        let errorDataRef = DataCollector()
+        
+        outputPipe.fileHandleForReading.readabilityHandler = { handle in
+            let chunk = handle.availableData
+            guard !chunk.isEmpty else { return }
+            outputDataRef.append(chunk)
+            if let onOutput = onOutput, let string = String(data: chunk, encoding: .utf8) {
+                Task { @MainActor in onOutput(string) }
+            }
+        }
+        
+        errorPipe.fileHandleForReading.readabilityHandler = { handle in
+            let chunk = handle.availableData
+            guard !chunk.isEmpty else { return }
+            errorDataRef.append(chunk)
+            if let onError = onError, let string = String(data: chunk, encoding: .utf8) {
+                Task { @MainActor in onError(string) }
+            }
+        }
+        
+        do {
+            try process.run()
+            if let stdin = stdin {
                 inputPipe.fileHandleForWriting.write(stdin)
                 inputPipe.fileHandleForWriting.closeFile()
-            } catch {
-                print("GitService: Failed to start process: \(error.localizedDescription)")
-                throw error
             }
-        } else {
-            do {
-                try process.run()
-            } catch {
-                print("GitService: Failed to start process: \(error.localizedDescription)")
-                throw error
+        } catch {
+            print("GitService: Failed to start process: \(error.localizedDescription)")
+            outputPipe.fileHandleForReading.readabilityHandler = nil
+            errorPipe.fileHandleForReading.readabilityHandler = nil
+            throw error
+        }
+        
+        // Wait for process to exit without blocking a thread
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            process.terminationHandler = { _ in
+                continuation.resume()
             }
         }
         
-        let outputTask = Task {
-            outputPipe.fileHandleForReading.readDataToEndOfFile()
+        // Clean up readability handlers
+        outputPipe.fileHandleForReading.readabilityHandler = nil
+        errorPipe.fileHandleForReading.readabilityHandler = nil
+        
+        // Drain any remaining data
+        if let remainingOutput = try? outputPipe.fileHandleForReading.readToEnd(), !remainingOutput.isEmpty {
+            outputDataRef.append(remainingOutput)
+            if let onOutput = onOutput, let string = String(data: remainingOutput, encoding: .utf8) {
+                Task { @MainActor in onOutput(string) }
+            }
         }
         
-        let errorTask = Task {
-            errorPipe.fileHandleForReading.readDataToEndOfFile()
+        if let remainingError = try? errorPipe.fileHandleForReading.readToEnd(), !remainingError.isEmpty {
+            errorDataRef.append(remainingError)
+            if let onError = onError, let string = String(data: remainingError, encoding: .utf8) {
+                Task { @MainActor in onError(string) }
+            }
         }
         
-        let outputData = await outputTask.value
-        let errorData = await errorTask.value
+        // Synchronously extract data to ensure all appends are finished
+        let finalOutputData = outputDataRef.get()
+        let finalErrorData = errorDataRef.get()
         
-        process.waitUntilExit()
-        
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let error = String(data: errorData, encoding: .utf8) ?? ""
+        let output = String(data: finalOutputData, encoding: .utf8) ?? ""
+        let error = String(data: finalErrorData, encoding: .utf8) ?? ""
         
         let result = GitResult(
             output: output.trimmingCharacters(in: .newlines),
@@ -146,8 +237,8 @@ nonisolated extension GitService {
 
     // Clone
     @discardableResult
-    func clone(url: String, to path: String) async throws -> GitResult {
-        try await run(["clone", url, path])
+    func clone(url: String, to path: String, onOutput: (@Sendable (String) -> Void)? = nil, onError: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
+        try await run(["clone", url, path], onOutput: onOutput, onError: onError)
     }
     
     // Status
@@ -169,21 +260,21 @@ nonisolated extension GitService {
     
     // Commit
     @discardableResult
-    func commit(message: String, at repo: String) async throws -> GitResult {
-        try await run(["commit", "-m", message], at: repo)
+    func commit(message: String, at repo: String, onOutput: (@Sendable (String) -> Void)? = nil, onError: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
+        try await run(["commit", "-m", message], at: repo, onOutput: onOutput, onError: onError)
     }
     
     // Push / Pull
     @discardableResult
-    func push(at repo: String, branch: String? = nil, setUpstream: Bool = false) async throws -> GitResult {
+    func push(at repo: String, branch: String? = nil, setUpstream: Bool = false, onOutput: (@Sendable (String) -> Void)? = nil, onError: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
         if let branch {
             if setUpstream {
-                return try await run(["push", "-u", "origin", branch], at: repo)
+                return try await run(["push", "-u", "origin", branch], at: repo, onOutput: onOutput, onError: onError)
             } else {
-                return try await run(["push", "origin", branch], at: repo)
+                return try await run(["push", "origin", branch], at: repo, onOutput: onOutput, onError: onError)
             }
         } else {
-            return try await run(["push"], at: repo)
+            return try await run(["push"], at: repo, onOutput: onOutput, onError: onError)
         }
     }
     
@@ -193,16 +284,16 @@ nonisolated extension GitService {
     }
     
     @discardableResult
-    func pull(at repo: String) async throws -> GitResult {
-        try await run(["pull"], at: repo)
+    func pull(at repo: String, onOutput: (@Sendable (String) -> Void)? = nil, onError: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
+        try await run(["pull"], at: repo, onOutput: onOutput, onError: onError)
     }
     
     @discardableResult
-    func pull(branch: String, rebase: Bool = false, at repo: String) async throws -> GitResult {
+    func pull(branch: String, rebase: Bool = false, at repo: String, onOutput: (@Sendable (String) -> Void)? = nil, onError: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
         if rebase {
-            return try await run(["pull", "--rebase", "origin", branch], at: repo)
+            return try await run(["pull", "--rebase", "origin", branch], at: repo, onOutput: onOutput, onError: onError)
         } else {
-            return try await run(["pull", "origin", branch], at: repo)
+            return try await run(["pull", "origin", branch], at: repo, onOutput: onOutput, onError: onError)
         }
     }
     
@@ -344,8 +435,8 @@ nonisolated extension GitService {
     }
     
     @discardableResult
-    func fetch(at repo:String) async throws -> GitResult {
-        try await run(["fetch"], at: repo)
+    func fetch(at repo:String, onOutput: (@Sendable (String) -> Void)? = nil, onError: (@Sendable (String) -> Void)? = nil) async throws -> GitResult {
+        try await run(["fetch"], at: repo, onOutput: onOutput, onError: onError)
     }
     @discardableResult
     func checkout(branch: String, trackRemote: Bool = false, at repo: String) async throws -> GitResult {

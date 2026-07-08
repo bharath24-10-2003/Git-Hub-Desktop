@@ -68,7 +68,11 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $coordinator.viewModel.isLoading) {
-            LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
+            if coordinator.viewModel.useRichLog {
+                GitCommandLogView(viewModel: coordinator.viewModel.commandLogViewModel, isPresented: $coordinator.viewModel.isLoading)
+            } else {
+                LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
+            }
         }
         .dialogIcon(Image(.branch))
         .onChange(of: coordinator.viewModel.selectedRepo) {
