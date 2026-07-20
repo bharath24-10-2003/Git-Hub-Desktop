@@ -41,7 +41,7 @@ struct ChangesView: View {
             }
             
             if viewModel.changedFiles.isEmpty {
-                NoChangesView()
+                NoChangesView(viewModel: viewModel, repo: repo)
             } else {
                 VStack {
                     commitSection
@@ -367,6 +367,9 @@ struct ChangesView: View {
 }
 
 struct NoChangesView : View {
+    let viewModel: MainViewModel
+    let repo: Repo
+    
     var body: some View {
     
         VStack {
@@ -377,6 +380,13 @@ struct NoChangesView : View {
             Text("No changes done yet for commit")
                 .appFont(.headline)
                 .foregroundColor(.secondary)
+                
+            SmallButton(title: "Refresh") {
+                Task {
+                    await viewModel.loadRepositoryData(for: repo)
+                }
+            }
+            .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         

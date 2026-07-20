@@ -16,6 +16,7 @@ struct BranchesView: View {
     
     @State var searchLocalBranch: String = ""
     @State var searchRemoteBranch: String = ""
+    @State var searchTag: String = ""
     @State var selectedBranch: String? = nil
     @State private var error: String?
     
@@ -32,6 +33,14 @@ struct BranchesView: View {
             return viewModel.remoteBranches
         } else {
             return viewModel.remoteBranches.filter { $0.localizedCaseInsensitiveContains(searchRemoteBranch) }
+        }
+    }
+    
+    var filteredTags: [String] {
+        if searchTag.isEmpty {
+            return viewModel.tags
+        } else {
+            return viewModel.tags.filter { $0.localizedCaseInsensitiveContains(searchTag) }
         }
     }
     
@@ -107,6 +116,7 @@ struct BranchesView: View {
                                     .padding(.horizontal, 4)
                                 
                                 LocalBranchRow(branch: viewModel.currentBranch, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection, selectedBranch: $selectedBranch)
+                                    .padding(.horizontal)
                             }
                             
                             Divider()
@@ -124,6 +134,7 @@ struct BranchesView: View {
                                 
                                 ForEach(otherBranches, id: \.self) { branch in
                                     LocalBranchRow(branch: branch, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection, selectedBranch: $selectedBranch)
+                                        .padding(.horizontal)
                                 }
                             }
                         }
@@ -205,6 +216,63 @@ struct BranchesView: View {
                         .padding(.horizontal)
                     }
                 }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 30)
+                        .stroke(lineWidth: 1)
+                        .opacity(0.2)
+                }
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "tag.fill")
+                        Text("Tags")
+                            .appFont(size: 14, weight: .semibold)
+                        Text("\(viewModel.tags.count)")
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 10)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .opacity(0.2)
+                            }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top)
+                    
+                    Divider()
+                    
+                    CustomSearchBar(text: $searchTag, placeholder: "Search tags...")
+                    
+                    ScrollView {
+                        ForEach (filteredTags, id: \.self) { tag in
+                            TagText(tagName: tag, isSelected: selectedBranch == tag)
+                                .onTapGesture {
+                                    selectedBranch = tag
+                                }
+                                .contextMenu {
+                                    Button {
+                                        viewModel.historyBranch = tag
+                                        selectedSection = .history
+                                        Task {
+                                            await viewModel.loadRepositoryData(for: repo)
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "clock.arrow.circlepath")
+                                            Text("See History")
+                                        }
+                                    }
+                                } preview: {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(tag)
+                                            .appFont(size: 16, weight: .semibold)
+                                    }
+                                    .padding(10)
+                                }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .frame(maxWidth: 200)
                 .overlay {
                     RoundedRectangle(cornerRadius: 30)
                         .stroke(lineWidth: 1)
@@ -338,5 +406,32 @@ struct LocalBranchRow: View {
                 }
                 .padding(10)
             }
+    }
+}
+
+struct TagText: View {
+    let tagName: String
+    let isSelected: Bool
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "tag")
+                .appFont(size: 14, weight: .semibold)
+            Text(tagName)
+                .appFont(size: 14, weight: .semibold, design: .rounded)
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .overlay {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.blue, lineWidth: 1.5)
+                    .padding(1)
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .opacity(0.1)
+            }
+        }
     }
 }

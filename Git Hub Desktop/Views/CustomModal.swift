@@ -65,7 +65,7 @@ struct CloneModal: View {
             } else {
                 HStack (alignment:.center) {
                     Spacer()
-                    BaseButton(title: "Close") {
+                    BaseButton(title: "Close", keyboardShortcut: .cancelAction) {
                         coordinator.dismissSheet()
                     }
                     ProminentBaseButton(title: "Clone Repository") {
@@ -120,7 +120,7 @@ struct StashModal: View {
                     ErrorBannerView(message: error)
                 }
                 
-                BaseButton(title: "Cancel") {
+                BaseButton(title: "Cancel", keyboardShortcut: .cancelAction) {
                     onDismiss()
                 }
                 
@@ -177,7 +177,7 @@ struct AddRepoModal: View {
             
             HStack (alignment:.center) {
                 Spacer()
-                BaseButton(title: "Close") {
+                BaseButton(title: "Close", keyboardShortcut: .cancelAction) {
                     coordinator.dismissSheet()
                 }
                 ProminentBaseButton(title: "Add Repository") {
@@ -229,6 +229,7 @@ struct BaseButton: View {
     var image: Image? = nil
     var textTint: Color = .primary
     var imageSize: CGSize = CGSize(width: 16, height: 16)
+    var keyboardShortcut: KeyboardShortcut? = nil
     var action: (() -> Void)
     
     var body: some View {
@@ -256,6 +257,7 @@ struct BaseButton: View {
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
         .buttonStyle(.bordered)
+        .keyboardShortcut(keyboardShortcut)
     }
 }
 
@@ -292,6 +294,7 @@ struct ProminentBaseButton: View{
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
         .buttonStyle(.borderedProminent)
+        .keyboardShortcut(.defaultAction)
     }
 }
 
@@ -398,6 +401,7 @@ struct ErrorDetailSheet: View {
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
             .padding(.bottom, 8)
             
@@ -476,7 +480,7 @@ struct NewBranchModal: View {
             
             HStack {
                 Spacer()
-                BaseButton(title: "Cancel") {
+                BaseButton(title: "Cancel", keyboardShortcut: .cancelAction) {
                     coordinator.dismissSheet()
                 }
                 ProminentBaseButton(title: "Create Branch") {
@@ -531,7 +535,7 @@ struct PullBranchModal: View {
             HStack {
                 Spacer()
                 
-                BaseButton(title: "Cancel") {
+                BaseButton(title: "Cancel", keyboardShortcut: .cancelAction) {
                     coordinator.dismissSheet()
                 }
                 
@@ -607,7 +611,7 @@ struct DeleteBranchModal: View {
                 if isDeleting {
                     ProgressView()
                 }
-                BaseButton(title: "Cancel") {
+                BaseButton(title: "Cancel", keyboardShortcut: .cancelAction) {
                     coordinator.dismissSheet()
                 }
                 
@@ -666,7 +670,7 @@ struct RenameBranchModal: View {
             HStack {
                 Spacer()
                 
-                BaseButton(title: "Cancel") {
+                BaseButton(title: "Cancel", keyboardShortcut: .cancelAction) {
                     coordinator.dismissSheet()
                 }
                 
@@ -719,7 +723,7 @@ struct HistoryCherryPickModal: View {
             Divider()
             HStack {
                 Spacer()
-                BaseButton(title: "Close") {
+                BaseButton(title: "Close", keyboardShortcut: .cancelAction) {
                     coordinator.dismissSheet()
                 }
                 ProminentBaseButton(title: "Cherry Pick") {

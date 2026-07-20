@@ -21,6 +21,7 @@ struct CommitDiffDetailView: View {
     @State private var isLoading: Bool = true
     @State private var isDiffLoading: Bool = false
     @State private var error: String? = nil
+    @FocusState private var isListFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -82,6 +83,11 @@ struct CommitDiffDetailView: View {
                         }
                     }
                     .frame(maxWidth: 400)
+                    .focusable()
+                    .focused($isListFocused)
+                    .onMoveCommand { direction in
+                        handleMove(direction)
+                    }
                     
                     // Right Pane: Diff
                     if selectedFileForDiff != nil {
@@ -125,6 +131,29 @@ struct CommitDiffDetailView: View {
         .navigationSubtitle("Hash: \(hash)")
         .task {
             await loadFiles()
+            isListFocused = true
+        }
+    }
+    
+    private func handleMove(_ direction: MoveCommandDirection) {
+        guard !changedFiles.isEmpty else { return }
+        
+        let currentIndex = changedFiles.firstIndex { $0.id == activeSelectedFileId } ?? 0
+        var newIndex = currentIndex
+        
+        switch direction {
+        case .up:
+            newIndex = max(0, currentIndex - 1)
+        case .down:
+            newIndex = min(changedFiles.count - 1, currentIndex + 1)
+        default:
+            return
+        }
+        
+        if newIndex != currentIndex {
+            let nextFile = changedFiles[newIndex]
+            activeSelectedFileId = nextFile.id
+            loadDiff(for: nextFile)
         }
     }
     

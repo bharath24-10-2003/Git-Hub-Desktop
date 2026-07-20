@@ -40,6 +40,7 @@ class MainViewModel {
     var stashes: [GitStash] = []
     var localBranches: [String] = []
     var remoteBranches: [String] = []
+    var tags: [String] = []
     
     var isCloning: Bool = false
     var isLoading: Bool = false
@@ -137,6 +138,11 @@ class MainViewModel {
                 $0.trimmingCharacters(in: .whitespacesAndNewlines)
             }.filter { !$0.isEmpty }
             
+            let rawTags = (try? await service.listTags(at: path)) ?? []
+            let cleanTags = rawTags.map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.filter { !$0.isEmpty }.sorted()
+            
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
             let isCherryPickInProgress = FileManager.default.fileExists(atPath: cherryPickPath)
             
@@ -149,6 +155,7 @@ class MainViewModel {
             
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
+            self.tags = cleanTags
             self.currentBranch = detectedCurrentBranch
             self.isCherryPicking = isCherryPickInProgress
             self.rebaseState = rebaseState
