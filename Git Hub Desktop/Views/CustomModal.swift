@@ -266,6 +266,7 @@ struct ProminentBaseButton: View{
     var title: String
     var image: Image? = nil
     var textTint: Color = .white
+    var keyboardShortcut: KeyboardShortcut? = .defaultAction
     var action: (() -> Void)
     
     var body: some View {
@@ -294,7 +295,7 @@ struct ProminentBaseButton: View{
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
         .buttonStyle(.borderedProminent)
-        .keyboardShortcut(.defaultAction)
+        .keyboardShortcut(keyboardShortcut)
     }
 }
 

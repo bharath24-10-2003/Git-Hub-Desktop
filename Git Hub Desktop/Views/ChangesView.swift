@@ -176,23 +176,11 @@ struct ChangesView: View {
                     .textFieldStyle(.plain)
                     .appFont(size: 14, weight: .regular)
                     .padding(.leading)
-                SmallProminentButton(title: "Commit") {
-                    guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                    self.error = nil
-                    Task {
-                        do {
-                            try await viewModel.commitChanges(message: commitMessage, at: repo)
-                            commitMessage = ""
-                            selectedFiles.removeAll()
-                        } catch {
-                            if error.localizedDescription.contains("Changes not staged for commit") {
-                                self.error = "Stage changes to commit."
-                            } else {
-                                self.error = error.localizedDescription
-                            }
-                            
-                        }
+                    .onSubmit {
+                        performCommit()
                     }
+                SmallProminentButton(title: "Commit") {
+                    performCommit()
                 }
             }
             .frame(maxWidth: 500)
@@ -201,6 +189,24 @@ struct ChangesView: View {
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(lineWidth: 1)
                     .opacity(0.3)
+            }
+        }
+    }
+    
+    private func performCommit() {
+        guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        self.error = nil
+        Task {
+            do {
+                try await viewModel.commitChanges(message: commitMessage, at: repo)
+                commitMessage = ""
+                selectedFiles.removeAll()
+            } catch {
+                if error.localizedDescription.contains("Changes not staged for commit") {
+                    self.error = "Stage changes to commit."
+                } else {
+                    self.error = error.localizedDescription
+                }
             }
         }
     }
