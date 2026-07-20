@@ -17,6 +17,7 @@ struct ChangesView: View {
     @State private var selectedFiles = Set<String>()
     @State private var error: String?
     @State private var stashMessage: String?
+    @FocusState private var isListFocused: Bool
 
     var body: some View {
         VStack(spacing: 16) {
@@ -57,6 +58,30 @@ struct ChangesView: View {
         }
         .task {
             await viewModel.loadRepositoryData(for: repo)
+            isListFocused = true
+        }
+    }
+    
+    private func handleMove(_ direction: MoveCommandDirection) {
+        guard !viewModel.changedFiles.isEmpty else { return }
+        
+        let currentIndex = viewModel.changedFiles.firstIndex { $0.id == viewModel.selectedFileForDiff?.id } ?? 0
+        var newIndex = currentIndex
+        
+        switch direction {
+        case .up:
+            newIndex = max(0, currentIndex - 1)
+        case .down:
+            newIndex = min(viewModel.changedFiles.count - 1, currentIndex + 1)
+        default:
+            return
+        }
+        
+        if newIndex != currentIndex {
+            let nextFile = viewModel.changedFiles[newIndex]
+            Task {
+                try? await viewModel.loadDiff(for: nextFile, at: repo)
+            }
         }
     }
     
@@ -317,6 +342,11 @@ struct ChangesView: View {
                         }
                     }
                     .frame(minWidth: 350,maxWidth: 500)
+                    .focusable()
+                    .focused($isListFocused)
+                    .onMoveCommand { direction in
+                        handleMove(direction)
+                    }
                     
                     if viewModel.selectedFileForDiff != nil {
                         // Right: Diff View
