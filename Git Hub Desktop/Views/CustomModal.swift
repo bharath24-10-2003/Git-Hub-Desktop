@@ -316,7 +316,10 @@ struct ModalDescription: View {
 struct ErrorBannerView: View {
     
     let message: String
+    var detailedError: GitResult? = nil
     var onDismiss: (() -> Void)? = nil
+    
+    @State private var showDetails = false
     
     var body: some View {
         HStack(spacing: 10) {
@@ -349,7 +352,88 @@ struct ErrorBannerView: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(.red.opacity(0.3), lineWidth: 1)
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if detailedError != nil {
+                showDetails = true
+            }
+        }
+        .sheet(isPresented: $showDetails) {
+            if let result = detailedError {
+                ErrorDetailSheet(result: result)
+            }
+        }
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+}
+
+struct ErrorDetailSheet: View {
+    let result: GitResult
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Error Details")
+                    .appFont(.title2, weight: .semibold)
+                Spacer()
+                Button {
+                    let text = """
+                    Command: \(result.command)
+                    Repository: \(result.repoPath)
+                    Exit Code: \(result.exitCode)
+                    Output: \(result.output)
+                    Error: \(result.error)
+                    """
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                    Text("Copy")
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                
+                Button("Done") {
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(.bottom, 8)
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Command")
+                    .appFont(.headline)
+                Text(result.command)
+                    .appFont(.body, design: .monospaced)
+                    .padding(8)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
+                
+                Text("Repository Path")
+                    .appFont(.headline)
+                Text(result.repoPath)
+                    .appFont(.body, design: .monospaced)
+                
+                Text("Exit Code")
+                    .appFont(.headline)
+                Text("\(result.exitCode)")
+                    .appFont(.body, design: .monospaced)
+            }
+            
+            Text("Output / Error")
+                .appFont(.headline)
+            ScrollView {
+                Text(result.error.isEmpty ? result.output : result.error)
+                    .appFont(.body, design: .monospaced)
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
+            }
+        }
+        .padding()
+        .frame(width: 500, height: 400)
     }
 }
 

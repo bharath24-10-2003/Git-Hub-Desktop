@@ -6,6 +6,7 @@ class GitCommandLogViewModel {
     var entries: [GitLogEntry] = []
     var rawLogText: String = ""
     var isRunning: Bool = false
+    var hasFailed: Bool = false
     var title: String = "Git Operation"
     
     private var lastIncompleteEntryId: UUID? = nil
@@ -24,6 +25,7 @@ class GitCommandLogViewModel {
         self.lastIncompleteEntryId = nil
         self.rawLogText = ""
         self.isRunning = true
+        self.hasFailed = false
         Task {
             await self.parser?.reset()
         }

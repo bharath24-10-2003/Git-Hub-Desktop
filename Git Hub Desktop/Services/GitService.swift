@@ -2,6 +2,8 @@ import Foundation
 
 // MARK: - Result Model
 nonisolated struct GitResult {
+    let command: String
+    let repoPath: String
     let output: String
     let error: String
     let exitCode: Int32
@@ -16,6 +18,7 @@ nonisolated struct GitResult {
 enum GitError: Error, LocalizedError {
     case invalidRepository
     case executionFailed(String)
+    case detailedError(GitResult)
     
     var errorDescription: String? {
         switch self {
@@ -23,6 +26,10 @@ enum GitError: Error, LocalizedError {
             return "Invalid Git repository path."
         case .executionFailed(let message):
             return message
+        case .detailedError(let result):
+            if !result.error.isEmpty { return result.error }
+            if !result.output.isEmpty { return result.output }
+            return "Git command failed."
         }
     }
 }
@@ -186,6 +193,8 @@ nonisolated final class GitService {
         let error = String(data: finalErrorData, encoding: .utf8) ?? ""
         
         let result = GitResult(
+            command: "git " + finalArgs.joined(separator: " "),
+            repoPath: repoPath ?? "default",
             output: output.trimmingCharacters(in: .newlines),
             error: error.trimmingCharacters(in: .newlines),
             exitCode: process.terminationStatus
@@ -325,6 +334,14 @@ nonisolated extension GitService {
         return result?.isSuccess == true
     }
 
+    func getBehindCommits(branch: String, at repo: String) async -> Int {
+        let result = try? await run(["rev-list", "--count", "\(branch)..@{u}"], at: repo)
+        guard let output = result?.output, result?.isSuccess == true else {
+            return 0
+        }
+        return Int(output.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    }
+
     // Get unpushed commits
     func getUnpushedCommits(branch: String, at repo: String) async -> Set<String> {
         let result = try? await run(["log", branch, "--not", "--remotes", "--format=%H"], at: repo)
@@ -345,7 +362,7 @@ nonisolated extension GitService {
         }
         let result = try await run(args, at: repo)
         if !result.isSuccess && result.output.isEmpty {
-            throw GitError.executionFailed(result.error)
+            throw GitError.detailedError(result)
         }
         return parseCommitFiles(result.output)
     }
@@ -360,7 +377,7 @@ nonisolated extension GitService {
         }
         let result = try await run(args, at: repo)
         if !result.isSuccess && result.output.isEmpty {
-            throw GitError.executionFailed(result.error)
+            throw GitError.detailedError(result)
         }
         return parseDiff(result.output)
     }
@@ -376,7 +393,7 @@ nonisolated extension GitService {
         
         // If there's an error and no output, throw it
         if !result.isSuccess && result.output.isEmpty {
-            throw GitError.executionFailed(result.error)
+            throw GitError.detailedError(result)
         }
         
         return parseDiff(result.output)
@@ -773,7 +790,7 @@ nonisolated extension GitService {
         if file.status == "Untracked" {
             let fileURL = URL(fileURLWithPath: repo).appendingPathComponent(file.path)
             try? FileManager.default.removeItem(at: fileURL)
-            return GitResult(output: "", error: "", exitCode: 0)
+            return GitResult(command: "rm \(file.path)", repoPath: repo, output: "", error: "", exitCode: 0)
         } else {
             return try await run(["restore", file.path], at: repo)
         }

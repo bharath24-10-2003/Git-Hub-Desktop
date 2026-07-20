@@ -48,6 +48,20 @@ struct GitCommandLogView: View {
             } else {
                 rawLogView
             }
+            
+            if viewModel.hasFailed {
+                Divider()
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .padding()
+                }
+                .background(Color(NSColor.windowBackgroundColor).opacity(0.8))
+            }
         }
         .frame(minWidth: 900, minHeight: 600)
         .background(.regularMaterial)

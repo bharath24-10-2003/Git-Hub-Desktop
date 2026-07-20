@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import Combine
 
 struct ContentView: View {
 
     @Bindable var coordinator: AppCoordinator
     @Environment(\.scenePhase) private var scenePhase
+    let backgroundFetchTimer = Timer.publish(every: 300, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationSplitView {
@@ -114,6 +116,16 @@ struct ContentView: View {
                 if let repo = coordinator.viewModel.selectedRepo {
                     Task {
                         await coordinator.viewModel.loadRepositoryData(for: repo)
+                        _ = await coordinator.viewModel.backgroundFetch(at: repo)
+                    }
+                }
+            }
+        }
+        .onReceive(backgroundFetchTimer) { _ in
+            if scenePhase == .active {
+                if let repo = coordinator.viewModel.selectedRepo {
+                    Task {
+                        _ = await coordinator.viewModel.backgroundFetch(at: repo)
                     }
                 }
             }

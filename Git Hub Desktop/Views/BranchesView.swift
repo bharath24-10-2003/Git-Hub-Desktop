@@ -70,7 +70,7 @@ struct BranchesView: View {
             }
             
             if let error {
-                ErrorBannerView(message: error) {
+                ErrorBannerView(message: error, detailedError: viewModel.lastDetailedError) {
                     self.error = nil
                 }
                 .padding(.horizontal)
@@ -98,54 +98,35 @@ struct BranchesView: View {
                     CustomSearchBar(text: $searchLocalBranch, placeholder: "Search local branches...")
                     
                     ScrollView {
-                        ForEach (filteredLocalBranches, id: \.self) { branch in
-                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
-                                .onTapGesture {
-                                    selectedBranch = branch
-                                }
-                                .contextMenu {
-                                    Button {
-                                        viewModel.selectedBranchForAction = branch
-                                        viewModel.isRemoteBranchAction = false
-                                        coordinator.renameBranch(for: repo)
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "pencil.line")
-                                            Text("Rename")
-                                        }
-                                    }
-                                    Button {
-                                        viewModel.historyBranch = branch
-                                        selectedSection = .history
-                                        Task {
-                                            await viewModel.loadRepositoryData(for: repo)
-                                        }
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "clock.arrow.circlepath")
-                                            Text("See History")
-                                        }
-                                    }
-                                    Button {
-                                        viewModel.selectedBranchForAction = branch
-                                        viewModel.isRemoteBranchAction = false
-                                        coordinator.presentDeleteBranch(for: repo)
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "trash")
-                                            Text("Delete")
-                                        }
-                                    }
-                                } preview: {
-                                    VStack(alignment: .leading, spacing: 10) {
-                                        Text(branch)
-                                            .appFont(size: 16, weight: .semibold)
-                                    }
-                                    .padding(10)
-                                }
-
+                        if filteredLocalBranches.contains(viewModel.currentBranch) {
+                            VStack(alignment: .leading) {
+                                Text("Current Branch")
+                                    .appFont(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 4)
+                                    .padding(.horizontal, 4)
+                                
+                                LocalBranchRow(branch: viewModel.currentBranch, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection, selectedBranch: $selectedBranch)
+                            }
+                            
+                            Divider()
+                                .padding(.vertical, 4)
                         }
-                        .padding(.horizontal)
+                        
+                        let otherBranches = filteredLocalBranches.filter { $0 != viewModel.currentBranch }
+                        if !otherBranches.isEmpty {
+                            VStack(alignment: .leading) {
+                                Text("Local Branches")
+                                    .appFont(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 4)
+                                    .padding(.horizontal, 4)
+                                
+                                ForEach(otherBranches, id: \.self) { branch in
+                                    LocalBranchRow(branch: branch, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection, selectedBranch: $selectedBranch)
+                                }
+                            }
+                        }
                     }
                 }
                 .overlay {
@@ -301,5 +282,61 @@ struct BranchText: View {
                     .opacity(0.1)
             }
         }
+    }
+}
+
+struct LocalBranchRow: View {
+    let branch: String
+    let repo: Repo
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
+    @Binding var selectedSection: RepoSection
+    @Binding var selectedBranch: String?
+
+    var body: some View {
+        BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
+            .onTapGesture {
+                selectedBranch = branch
+            }
+            .contextMenu {
+                Button {
+                    viewModel.selectedBranchForAction = branch
+                    viewModel.isRemoteBranchAction = false
+                    coordinator.renameBranch(for: repo)
+                } label: {
+                    HStack {
+                        Image(systemName: "pencil.line")
+                        Text("Rename")
+                    }
+                }
+                Button {
+                    viewModel.historyBranch = branch
+                    selectedSection = .history
+                    Task {
+                        await viewModel.loadRepositoryData(for: repo)
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("See History")
+                    }
+                }
+                Button {
+                    viewModel.selectedBranchForAction = branch
+                    viewModel.isRemoteBranchAction = false
+                    coordinator.presentDeleteBranch(for: repo)
+                } label: {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Delete")
+                    }
+                }
+            } preview: {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(branch)
+                        .appFont(size: 16, weight: .semibold)
+                }
+                .padding(10)
+            }
     }
 }

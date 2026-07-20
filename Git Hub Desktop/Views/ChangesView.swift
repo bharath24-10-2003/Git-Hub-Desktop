@@ -30,7 +30,7 @@ struct ChangesView: View {
             }
             if viewModel.isCherryPicking {
                 if let error {
-                    ErrorBannerView(message: error) {
+                    ErrorBannerView(message: error, detailedError: viewModel.lastDetailedError) {
                         self.error = nil
                     }
                     .padding(.horizontal)
@@ -46,7 +46,7 @@ struct ChangesView: View {
                 VStack {
                     commitSection
                     if !viewModel.isCherryPicking, let error {
-                        ErrorBannerView(message: error) {
+                        ErrorBannerView(message: error, detailedError: viewModel.lastDetailedError) {
                             self.error = nil
                         }
                         .padding(.horizontal)
@@ -238,6 +238,32 @@ struct ChangesView: View {
                             }
                         }
                     }
+                    if viewModel.changedFiles.contains(where: { $0.isStaged }) {
+                        SmallButton(title: "Unstage All") {
+                            self.error = nil
+                            Task {
+                                do {
+                                    _ = try await viewModel.unstageAll(at: repo)
+                                    selectedFiles.removeAll()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                }
+                            }
+                        }
+                    }
+                    if selectedFiles.contains(where: { path in viewModel.changedFiles.first(where: { $0.path == path })?.isStaged == true }) {
+                        SmallButton(title: "Unstage Selected") {
+                            self.error = nil
+                            Task {
+                                do {
+                                    _ = try await viewModel.unstageSelected(files: Array(selectedFiles), at: repo)
+                                    selectedFiles.removeAll()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                }
+                            }
+                        }
+                    }
                     SmallButton(title: "Discard All", tint: .red) {
                         self.error = nil
                         Task {
@@ -247,6 +273,11 @@ struct ChangesView: View {
                             } catch {
                                 self.error = error.localizedDescription
                             }
+                        }
+                    }
+                    SmallButton(title: "Refresh") {
+                        Task {
+                            await viewModel.loadRepositoryData(for: repo)
                         }
                     }
                 }
