@@ -103,7 +103,7 @@ nonisolated final class GitService {
         process.standardError = errorPipe
         
         let inputPipe = Pipe()
-        if let stdin = stdin {
+        if stdin != nil {
             process.standardInput = inputPipe
         }
         
@@ -222,12 +222,11 @@ nonisolated extension GitService {
         return nil
     }
     
-    @discardableResult
-    func setGlobalConfig(key: String, value: String) async throws -> GitResult {
+    func setGlobalConfig(key: String, value: String) async throws {
         if value.isEmpty {
-            return try await run(["config", "--global", "--unset", key])
+            try await run(["config", "--global", "--unset", key])
         } else {
-            return try await run(["config", "--global", key, value])
+            try await run(["config", "--global", key, value])
         }
     }
     

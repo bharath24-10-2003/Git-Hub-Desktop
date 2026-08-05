@@ -91,7 +91,17 @@ struct ContentView: View {
                 }
             }
         }
-        .task {
+        .onReceive(NotificationCenter.default.publisher(
+              for: NSApplication.didBecomeActiveNotification
+          )) { _ in
+              if let repo = coordinator.viewModel.selectedRepo {
+                  Task {
+                      await coordinator.viewModel.loadRepositoryData(for: repo)
+                      _ = await coordinator.viewModel.backgroundFetch(at: repo)
+                  }
+              }
+          }
+          .task {
             if let repo = coordinator.viewModel.selectedRepo {
                 await coordinator.viewModel.loadRepositoryData(for: repo)
                 if coordinator.viewModel.rebaseState.inProgress {
