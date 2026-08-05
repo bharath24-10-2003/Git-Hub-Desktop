@@ -52,7 +52,6 @@ struct HistoryView: View {
                               .padding()
                         }
                     }
-                    .background(Color(NSColor.controlBackgroundColor))
                     .padding(.bottom, 14)
                     .onAppear {
                         self.height = proxy.size.height
