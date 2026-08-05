@@ -17,6 +17,7 @@ struct ChangesView: View {
     @State private var selectedFiles = Set<String>()
     @State private var error: String?
     @State private var stashMessage: String?
+    @FocusState private var isListFocused: Bool
 
     var body: some View {
         VStack(spacing: 16) {
@@ -30,7 +31,7 @@ struct ChangesView: View {
             }
             if viewModel.isCherryPicking {
                 if let error {
-                    ErrorBannerView(message: error) {
+                    ErrorBannerView(message: error, detailedError: viewModel.lastDetailedError) {
                         self.error = nil
                     }
                     .padding(.horizontal)
@@ -41,12 +42,12 @@ struct ChangesView: View {
             }
             
             if viewModel.changedFiles.isEmpty {
-                NoChangesView()
+                NoChangesView(viewModel: viewModel, repo: repo)
             } else {
                 VStack {
                     commitSection
                     if !viewModel.isCherryPicking, let error {
-                        ErrorBannerView(message: error) {
+                        ErrorBannerView(message: error, detailedError: viewModel.lastDetailedError) {
                             self.error = nil
                         }
                         .padding(.horizontal)
@@ -57,6 +58,30 @@ struct ChangesView: View {
         }
         .task {
             await viewModel.loadRepositoryData(for: repo)
+            isListFocused = true
+        }
+    }
+    
+    private func handleMove(_ direction: MoveCommandDirection) {
+        guard !viewModel.changedFiles.isEmpty else { return }
+        
+        let currentIndex = viewModel.changedFiles.firstIndex { $0.id == viewModel.selectedFileForDiff?.id } ?? 0
+        var newIndex = currentIndex
+        
+        switch direction {
+        case .up:
+            newIndex = max(0, currentIndex - 1)
+        case .down:
+            newIndex = min(viewModel.changedFiles.count - 1, currentIndex + 1)
+        default:
+            return
+        }
+        
+        if newIndex != currentIndex {
+            let nextFile = viewModel.changedFiles[newIndex]
+            Task {
+                try? await viewModel.loadDiff(for: nextFile, at: repo)
+            }
         }
     }
     
@@ -176,31 +201,37 @@ struct ChangesView: View {
                     .textFieldStyle(.plain)
                     .appFont(size: 14, weight: .regular)
                     .padding(.leading)
-                SmallProminentButton(title: "Commit") {
-                    guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                    self.error = nil
-                    Task {
-                        do {
-                            try await viewModel.commitChanges(message: commitMessage, at: repo)
-                            commitMessage = ""
-                            selectedFiles.removeAll()
-                        } catch {
-                            if error.localizedDescription.contains("Changes not staged for commit") {
-                                self.error = "Stage changes to commit."
-                            } else {
-                                self.error = error.localizedDescription
-                            }
-                            
-                        }
+                    .onSubmit {
+                        performCommit()
                     }
+                SmallProminentButton(title: "Commit") {
+                    performCommit()
                 }
             }
             .frame(maxWidth: 500)
-            .padding(8)
+            .padding(6)
             .overlay {
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(lineWidth: 1)
                     .opacity(0.3)
+            }
+        }
+    }
+    
+    private func performCommit() {
+        guard !commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        self.error = nil
+        Task {
+            do {
+                try await viewModel.commitChanges(message: commitMessage, at: repo)
+                commitMessage = ""
+                selectedFiles.removeAll()
+            } catch {
+                if error.localizedDescription.contains("Changes not staged for commit") {
+                    self.error = "Stage changes to commit."
+                } else {
+                    self.error = error.localizedDescription
+                }
             }
         }
     }
@@ -211,7 +242,8 @@ struct ChangesView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Modified Changes")
-                        .appFont(.headline)
+                        .appFont(.title2)
+                        .padding(.leading, 8)
                     Spacer()
                     SmallButton(title: "Stash") {
                         coordinator.presentStash(for: repo)
@@ -237,6 +269,32 @@ struct ChangesView: View {
                             }
                         }
                     }
+                    if viewModel.changedFiles.contains(where: { $0.isStaged }) {
+                        SmallButton(title: "Unstage All") {
+                            self.error = nil
+                            Task {
+                                do {
+                                    _ = try await viewModel.unstageAll(at: repo)
+                                    selectedFiles.removeAll()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                }
+                            }
+                        }
+                    }
+                    if selectedFiles.contains(where: { path in viewModel.changedFiles.first(where: { $0.path == path })?.isStaged == true }) {
+                        SmallButton(title: "Unstage Selected") {
+                            self.error = nil
+                            Task {
+                                do {
+                                    _ = try await viewModel.unstageSelected(files: Array(selectedFiles), at: repo)
+                                    selectedFiles.removeAll()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                }
+                            }
+                        }
+                    }
                     SmallButton(title: "Discard All", tint: .red) {
                         self.error = nil
                         Task {
@@ -248,8 +306,13 @@ struct ChangesView: View {
                             }
                         }
                     }
+                    SmallButton(title: "Refresh") {
+                        Task {
+                            await viewModel.loadRepositoryData(for: repo)
+                        }
+                    }
                 }
-                .padding()
+                .padding(10)
                 
                 Divider()
                 HSplitView {
@@ -278,7 +341,12 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    .frame(minWidth: 400,maxWidth: 500)
+                    .frame(minWidth: 350,maxWidth: 500)
+                    .focusable()
+                    .focused($isListFocused)
+                    .onMoveCommand { direction in
+                        handleMove(direction)
+                    }
                     
                     if viewModel.selectedFileForDiff != nil {
                         // Right: Diff View
@@ -318,8 +386,6 @@ struct ChangesView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
-        .padding(.horizontal)
-        .padding(.bottom)
     }
     
     private func statusColor(for status: String) -> Color {
@@ -337,6 +403,9 @@ struct ChangesView: View {
 }
 
 struct NoChangesView : View {
+    let viewModel: MainViewModel
+    let repo: Repo
+    
     var body: some View {
     
         VStack {
@@ -347,6 +416,13 @@ struct NoChangesView : View {
             Text("No changes done yet for commit")
                 .appFont(.headline)
                 .foregroundColor(.secondary)
+                
+            SmallButton(title: "Refresh") {
+                Task {
+                    await viewModel.loadRepositoryData(for: repo)
+                }
+            }
+            .padding(.top, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         
@@ -363,9 +439,9 @@ struct SmallProminentButton : View {
             action()
         } label: {
             Text(title)
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .appFont(size: 14, weight: .regular)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 6)
+                .appFont(size: 12, weight: .regular)
         }
         .buttonStyle(.borderedProminent)
         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -407,8 +483,8 @@ struct TitleView: View {
                 .appFont(size: 14, weight: .regular)
                 .opacity(0.7)
         }
-        .padding(.vertical, 24)
-        .padding(.leading, 24)
+        .padding(.vertical, 12)
+        .padding(.leading, 12)
         Spacer()
     }
 }

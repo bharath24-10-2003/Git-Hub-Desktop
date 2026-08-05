@@ -63,17 +63,32 @@ struct TopBar: View {
                     }
                     Spacer()
                     
-                    BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
-                        self.error = nil
-                        Task {
-                            do {
-                                _ = try await viewModel.fetch(at: repo)
-                            } catch {
-                                self.error = error.localizedDescription
+                    HStack(spacing: 4) {
+                        if viewModel.isBackgroundFetching {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else if viewModel.lastFetchError != nil {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                                .onTapGesture {
+                                    viewModel.lastDetailedError = viewModel.lastFetchError
+                                    self.error = "Background fetch failed."
+                                }
+                        }
+                        
+                        BaseButton(title: "Fetch", image: Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90"),imageSize: CGSize(width: 19, height: 16)) {
+                            self.error = nil
+                            Task {
+                                do {
+                                    _ = try await viewModel.fetch(at: repo)
+                                } catch {
+                                    self.error = error.localizedDescription
+                                }
                             }
                         }
                     }
-                    BaseButton(title: "Pull", image: Image(.pull)) {
+                    
+                    BaseButton(title: "Pull" + (viewModel.behindCommits > 0 ? " ↓\(viewModel.behindCommits)" : ""), image: Image(.pull)) {
                         self.error = nil
                         Task {
                             do {
@@ -83,7 +98,8 @@ struct TopBar: View {
                             }
                         }
                     }
-                    ProminentBaseButton(title: (!viewModel.hasUpstream ? "Publish branch" : "Push") + (viewModel.unPushedCommits != 0 ? " (\(viewModel.unPushedCommits))" : ""), image: Image(.push)) {
+                    .disabled(!viewModel.hasUpstream)
+                    ProminentBaseButton(title: (!viewModel.hasUpstream ? "Publish branch" : "Push") + (viewModel.unPushedCommits != 0 ? " (\(viewModel.unPushedCommits))" : ""), image: Image(.push), keyboardShortcut: nil) {
                         self.error = nil
                         Task {
                             do {
@@ -97,7 +113,7 @@ struct TopBar: View {
                 }
                 
                 if let error {
-                    ErrorBannerView(message: error) {
+                    ErrorBannerView(message: error, detailedError: viewModel.lastDetailedError) {
                         self.error = nil
                     }
                 }

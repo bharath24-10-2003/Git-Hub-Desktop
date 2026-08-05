@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import Combine
 
 struct ContentView: View {
 
     @Bindable var coordinator: AppCoordinator
     @Environment(\.scenePhase) private var scenePhase
+    let backgroundFetchTimer = Timer.publish(every: 300, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationSplitView {
@@ -68,8 +70,8 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $coordinator.viewModel.isLoading) {
-            if coordinator.viewModel.isStreamingHooks {
-                HookProgressView(loadingMessage: coordinator.viewModel.loadingMessage, hookTasks: coordinator.viewModel.hookTasks)
+            if coordinator.viewModel.useRichLog {
+                GitCommandLogView(viewModel: coordinator.viewModel.commandLogViewModel, isPresented: $coordinator.viewModel.isLoading)
             } else {
                 LoadingView(loadingMessage: coordinator.viewModel.loadingMessage, isLoading: coordinator.viewModel.isLoading)
             }
@@ -89,7 +91,17 @@ struct ContentView: View {
                 }
             }
         }
-        .task {
+        .onReceive(NotificationCenter.default.publisher(
+              for: NSApplication.didBecomeActiveNotification
+          )) { _ in
+              if let repo = coordinator.viewModel.selectedRepo {
+                  Task {
+                      await coordinator.viewModel.loadRepositoryData(for: repo)
+                      _ = await coordinator.viewModel.backgroundFetch(at: repo)
+                  }
+              }
+          }
+          .task {
             if let repo = coordinator.viewModel.selectedRepo {
                 await coordinator.viewModel.loadRepositoryData(for: repo)
                 if coordinator.viewModel.rebaseState.inProgress {
@@ -114,6 +126,16 @@ struct ContentView: View {
                 if let repo = coordinator.viewModel.selectedRepo {
                     Task {
                         await coordinator.viewModel.loadRepositoryData(for: repo)
+                        _ = await coordinator.viewModel.backgroundFetch(at: repo)
+                    }
+                }
+            }
+        }
+        .onReceive(backgroundFetchTimer) { _ in
+            if scenePhase == .active {
+                if let repo = coordinator.viewModel.selectedRepo {
+                    Task {
+                        _ = await coordinator.viewModel.backgroundFetch(at: repo)
                     }
                 }
             }

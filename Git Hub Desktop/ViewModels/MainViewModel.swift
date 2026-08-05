@@ -14,6 +14,8 @@ class MainViewModel {
     
     var service: GitService
     var store: RepoStore
+    var commandLogViewModel = GitCommandLogViewModel()
+    var useRichLog: Bool = false
     
     // MARK: - Reactive Repository States
     private var lastLoadedRepoId: UUID? = nil
@@ -38,18 +40,20 @@ class MainViewModel {
     var stashes: [GitStash] = []
     var localBranches: [String] = []
     var remoteBranches: [String] = []
+    var tags: [String] = []
     
     var isCloning: Bool = false
     var isLoading: Bool = false
     var loadingMessage: String = "Loading..."
-    var isStreamingHooks: Bool = false
-    var hookTasks: [HookTask] = []
-    
     var isCherryPicking: Bool = false
     var errorMessage: String? = nil
     var historyBranch: String? = nil
     var unPushedCommits: Int = 0
     var hasUpstream: Bool = true
+    var behindCommits: Int = 0
+    var isBackgroundFetching: Bool = false
+    var lastFetchError: GitResult?
+    var lastDetailedError: GitResult?
     var rebaseState = RebaseState(inProgress: false, currentCommitHash: "", currentCommitMessage: "", currentProgress: 0, totalProgress: 0, ontoBranch: "", headName: "")
     var mergeState = MergeState(inProgress: false, sourceBranch: "", targetBranch: "", currentCommitHash: "", defaultCommitMessage: "")
     
@@ -134,6 +138,11 @@ class MainViewModel {
                 $0.trimmingCharacters(in: .whitespacesAndNewlines)
             }.filter { !$0.isEmpty }
             
+            let rawTags = (try? await service.listTags(at: path)) ?? []
+            let cleanTags = rawTags.map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.filter { !$0.isEmpty }.sorted()
+            
             let cherryPickPath = URL(fileURLWithPath: path).appendingPathComponent(".git/CHERRY_PICK_HEAD").path
             let isCherryPickInProgress = FileManager.default.fileExists(atPath: cherryPickPath)
             
@@ -142,15 +151,18 @@ class MainViewModel {
             
             let unpushedCount = await service.getUnpushedCommits(branch: detectedCurrentBranch, at: path).count
             let hasUpstream = await service.hasUpstream(branch: detectedCurrentBranch, at: path)
+            let behindCount = await service.getBehindCommits(branch: detectedCurrentBranch, at: path)
             
             self.localBranches = cleanLocal
             self.remoteBranches = cleanRemote
+            self.tags = cleanTags
             self.currentBranch = detectedCurrentBranch
             self.isCherryPicking = isCherryPickInProgress
             self.rebaseState = rebaseState
             self.mergeState = mergeState
             self.unPushedCommits = unpushedCount
             self.hasUpstream = hasUpstream
+            self.behindCommits = behindCount
         } catch {
             self.errorMessage = error.localizedDescription
             print("Failed to load repo core data:", error)
@@ -239,6 +251,7 @@ class MainViewModel {
     // MARK: - Asynchronous Git Actions
     
     private func extractErrorMessage(from result: GitResult) -> String {
+        self.lastDetailedError = result
         if !result.error.isEmpty { return result.error }
         if !result.output.isEmpty { return result.output }
         return "Unknown Git error"
@@ -331,7 +344,7 @@ class MainViewModel {
     
     @discardableResult
     func stageSelected(files: [String], at repo: Repo) async throws -> GitResult {
-        guard !files.isEmpty else { return GitResult(output: "", error: "", exitCode: 0) }
+        guard !files.isEmpty else { return GitResult(command: "", repoPath: repo.path, output: "", error: "", exitCode: 0) }
         self.loadingMessage = "Staging selected changes..."
         self.isLoading = true
         defer { self.isLoading = false }
@@ -345,6 +358,37 @@ class MainViewModel {
         }
         await loadRepositoryData(for: repo)
         return lastResult!
+    }
+    
+    @discardableResult
+    func unstageSelected(files: [String], at repo: Repo) async throws -> GitResult {
+        guard !files.isEmpty else { return GitResult(command: "", repoPath: repo.path, output: "", error: "", exitCode: 0) }
+        self.loadingMessage = "Unstaging selected changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
+        var lastResult: GitResult? = nil
+        for file in files {
+            let result = try await service.restoreStaged(file: file, at: repo.path)
+            lastResult = result
+            if !result.isSuccess {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
+        }
+        await loadRepositoryData(for: repo)
+        return lastResult!
+    }
+    
+    @discardableResult
+    func unstageAll(at repo: Repo) async throws -> GitResult {
+        self.loadingMessage = "Unstaging all changes..."
+        self.isLoading = true
+        defer { self.isLoading = false }
+        let result = try await service.run(["restore", "--staged", "."], at: repo.path)
+        if !result.isSuccess {
+            throw GitError.executionFailed(extractErrorMessage(from: result))
+        }
+        await loadRepositoryData(for: repo)
+        return result
     }
     
     @discardableResult
@@ -376,31 +420,38 @@ class MainViewModel {
     @discardableResult
     func commitChanges(message: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Committing changes..."
+        self.commandLogViewModel.start(title: "Committing changes...")
+        self.useRichLog = true
         self.isLoading = true
-        self.isStreamingHooks = false
-        self.hookTasks = []
-        defer {
-            self.isLoading = false
-            self.isStreamingHooks = false
-        }
-        let result = try await service.commit(message: message, at: repo.path) { @Sendable [weak self] line in
-            Task { @MainActor in
-                self?.parseHookOutput(line: line)
+        
+        do {
+            let result = try await service.commit(message: message, at: repo.path, onOutput: progressHandler, onError: progressHandler)
+            if !result.isSuccess {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
             }
+            await loadRepositoryData(for: repo)
+            self.commandLogViewModel.finish()
+            self.isLoading = false
+            self.useRichLog = false
+            return result
+        } catch {
+            self.commandLogViewModel.finish()
+            self.commandLogViewModel.hasFailed = true
+            throw error
         }
-        if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
-        }
-        await loadRepositoryData(for: repo)
-        return result
     }
     
     @discardableResult
     func fetch(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Fetching updates..."
+        self.commandLogViewModel.start(title: "Fetch")
+        self.useRichLog = false
         self.isLoading = true
-        defer { self.isLoading = false }
-        let result = try await service.fetch(at: repo.path)
+        defer { 
+            self.isLoading = false
+            self.commandLogViewModel.finish()
+        }
+        let result = try await service.fetch(at: repo.path, onOutput: progressHandler, onError: progressHandler)
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
         }
@@ -409,15 +460,44 @@ class MainViewModel {
     }
     
     @discardableResult
+    func backgroundFetch(at repo: Repo) async -> GitResult {
+        self.isBackgroundFetching = true
+        defer { self.isBackgroundFetching = false }
+        do {
+            let result = try await service.fetch(at: repo.path)
+            if !result.isSuccess {
+                self.lastFetchError = result
+            } else {
+                self.lastFetchError = nil
+            }
+            await loadRepositoryData(for: repo)
+            return result
+        } catch {
+            if let gitError = error as? GitError, case let .detailedError(res) = gitError {
+                self.lastFetchError = res
+                return res
+            }
+            let res = GitResult(command: "fetch", repoPath: repo.path, output: "", error: error.localizedDescription, exitCode: 1)
+            self.lastFetchError = res
+            return res
+        }
+    }
+    
+    @discardableResult
     func pull(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pulling changes..."
+        self.commandLogViewModel.start(title: "Pull")
+        self.useRichLog = false
         self.isLoading = true
-        defer { self.isLoading = false }
+        defer { 
+            self.isLoading = false
+            self.commandLogViewModel.finish()
+        }
         let result: GitResult
         if !currentBranch.isEmpty {
-            result = try await service.pull(branch: currentBranch, at: repo.path)
+            result = try await service.pull(branch: currentBranch, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         } else {
-            result = try await service.pull(at: repo.path)
+            result = try await service.pull(at: repo.path, onOutput: progressHandler, onError: progressHandler)
         }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -429,13 +509,18 @@ class MainViewModel {
     @discardableResult
     func pull(name: String, rebase: Bool = false, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pulling changes..."
+        self.commandLogViewModel.start(title: "Pull")
+        self.useRichLog = false
         self.isLoading = true
-        defer { self.isLoading = false }
+        defer { 
+            self.isLoading = false
+            self.commandLogViewModel.finish()
+        }
         let result: GitResult
         if rebase {
-            result = try await service.pull(branch: name, rebase: true, at: repo.path)
+            result = try await service.pull(branch: name, rebase: true, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         } else {
-            result = try await service.pull(branch: name, at: repo.path)
+            result = try await service.pull(branch: name, at: repo.path, onOutput: progressHandler, onError: progressHandler)
         }
         if !result.isSuccess {
             throw GitError.executionFailed(extractErrorMessage(from: result))
@@ -447,6 +532,7 @@ class MainViewModel {
     @discardableResult
     func mergeBranch(name: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Merging branch..."
+        self.useRichLog = false
         self.isLoading = true
         defer { self.isLoading = false }
         let result = try await service.merge(branch: name, at: repo.path)
@@ -463,6 +549,7 @@ class MainViewModel {
     @discardableResult
     func rebaseBranch(name: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Rebasing branch..."
+        self.useRichLog = false
         self.isLoading = true
         defer { self.isLoading = false }
         let result = try await service.rebase(branch: name, at: repo.path)
@@ -479,50 +566,60 @@ class MainViewModel {
     @discardableResult
     func push(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Pushing commits..."
+        self.commandLogViewModel.start(title: "Pushing commits...")
+        self.useRichLog = true
         self.isLoading = true
-        self.isStreamingHooks = false
-        self.hookTasks = []
-        defer {
+        
+        do {
+            let result: GitResult
+            if !currentBranch.isEmpty {
+                result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream, onOutput: progressHandler, onError: progressHandler)
+            } else {
+                result = try await service.push(at: repo.path, onOutput: progressHandler, onError: progressHandler)
+            }
+            if !result.isSuccess {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
+            await loadRepositoryData(for: repo)
+            self.commandLogViewModel.finish()
             self.isLoading = false
-            self.isStreamingHooks = false
+            self.useRichLog = false
+            return result
+        } catch {
+            self.commandLogViewModel.finish()
+            self.commandLogViewModel.hasFailed = true
+            throw error
         }
-        let result: GitResult
-        if !currentBranch.isEmpty {
-            result = try await service.push(at: repo.path, branch: currentBranch, setUpstream: !hasUpstream) { @Sendable [weak self] line in
-                Task { @MainActor in
-                    self?.parseHookOutput(line: line)
-                }
-            }
-        } else {
-            result = try await service.push(at: repo.path) { @Sendable [weak self] line in
-                Task { @MainActor in
-                    self?.parseHookOutput(line: line)
-                }
-            }
-        }
-        if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
-        }
-        await loadRepositoryData(for: repo)
-        return result
     }
     
     @discardableResult
     func forcePush(at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Force pushing commits..."
+        self.commandLogViewModel.start(title: "Force Push")
+        self.useRichLog = true
         self.isLoading = true
-        defer { self.isLoading = false }
-        let result = try await service.forcePush(at: repo.path)
-        if !result.isSuccess {
-            throw GitError.executionFailed(extractErrorMessage(from: result))
+        
+        do {
+            let result = try await service.forcePush(at: repo.path)
+            if !result.isSuccess {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
+            await loadRepositoryData(for: repo)
+            self.commandLogViewModel.finish()
+            self.isLoading = false
+            self.useRichLog = false
+            return result
+        } catch {
+            self.commandLogViewModel.finish()
+            self.commandLogViewModel.hasFailed = true
+            throw error
         }
-        await loadRepositoryData(for: repo)
-        return result
     }
     
     @discardableResult
     func checkout(branch: String, at repo: Repo) async throws -> GitResult {
         self.loadingMessage = "Checking out branch..."
+        self.useRichLog = false
         self.isLoading = true
         defer { self.isLoading = false }
         let result: GitResult
@@ -810,57 +907,14 @@ class MainViewModel {
             self.errorMessage = error.localizedDescription
         }
     }
-}
-
-// MARK: - Git Hook Parsing
-extension MainViewModel {
-    func parseHookOutput(line: String) {
-        let text = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty { return }
-        
-        // Ensure we switch to streaming view
-        if !isStreamingHooks {
-            isStreamingHooks = true
-        }
-        
-        let lower = text.lowercased()
-        
-        // Heuristics for finding task names
-        var taskName = text
-        var status: HookStatus = .running
-        
-        if let dotIndex = text.range(of: "...") {
-            taskName = String(text[..<dotIndex.lowerBound]).trimmingCharacters(in: .whitespaces)
-        } else if text.hasPrefix("Running ") {
-            taskName = text
-        } else {
-            // Keep it simple if it's just raw output
-        }
-        
-        if lower.hasSuffix("passed") {
-            status = .passed
-        } else if lower.hasSuffix("failed") {
-            status = .failed
-        } else if lower.hasSuffix("skipped") {
-            status = .skipped
-        } else if lower.contains("running") {
-            status = .running
-        } else {
-            // If we don't detect a clear status at the end, and we already know this task, keep it running.
-            // Wait, if it has no dots and doesn't match above, it's just arbitrary log output.
-            if !hookTasks.isEmpty {
-                hookTasks[hookTasks.count - 1].rawOutput.append(text)
-                return
+    
+    // MARK: - Progress Handler
+    
+    private var progressHandler: @Sendable (String) -> Void {
+        return { [weak self] output in
+            Task { @MainActor in
+                self?.commandLogViewModel.parseAndAppend(output)
             }
-        }
-        
-        // Find existing or create new
-        if let idx = hookTasks.firstIndex(where: { $0.name == taskName }) {
-            hookTasks[idx].status = status
-            hookTasks[idx].rawOutput.append(text)
-        } else {
-            let newTask = HookTask(name: taskName, status: status, rawOutput: [text])
-            hookTasks.append(newTask)
         }
     }
 }
