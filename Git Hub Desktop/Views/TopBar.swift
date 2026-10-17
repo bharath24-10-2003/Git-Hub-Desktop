@@ -5,6 +5,7 @@
 //  Created by Bharath on 26/04/26.
 //
 
+import AppKit
 import SwiftUI
 
 struct TopBar: View {
@@ -53,6 +54,18 @@ struct TopBar: View {
                                 .appFont(.subheadline)
                         }
                     }
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(
+                            viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch,
+                            forType: .string
+                        )
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Copy branch name")
+                    .accessibilityLabel("Copy branch name")
                     Spacer()
                     
                     HStack(spacing: 4) {

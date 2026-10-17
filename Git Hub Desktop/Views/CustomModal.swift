@@ -692,6 +692,9 @@ struct RenameBranchModal: View {
         }
         .frame(width: 500)
         .padding()
+        .onAppear {
+            newBranchName = oldName
+        }
         .onDisappear {
             viewModel.selectedBranchForAction = nil
         }
