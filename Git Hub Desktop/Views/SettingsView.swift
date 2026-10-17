@@ -20,10 +20,15 @@ struct SettingsView: View {
             
             AuthSettingsView()
                 .tabItem {
-                    Label("Authentication", systemImage: "lock")
+                    Label("Git Credentials", systemImage: "key")
+                }
+
+            GitHubCLIAuthSettingsView()
+                .tabItem {
+                    Label("GitHub CLI", systemImage: "terminal")
                 }
         }
-        .frame(width: 450, height: 250)
+        .frame(width: 580, height: 360)
     }
 }
 
@@ -147,4 +152,8 @@ struct AuthSettingsView: View {
             isSaving = false
         }
     }
+}
+
+#Preview {
+    SettingsView()
 }
