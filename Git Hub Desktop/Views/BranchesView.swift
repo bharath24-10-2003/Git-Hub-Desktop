@@ -168,50 +168,23 @@ struct BranchesView: View {
                     ScrollView {
                         ForEach (filteredRemoteBranches, id: \.self) { branch in
                             // Remote branch is read-only, checkout creates local tracking branch
-                            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
-                                .onTapGesture {
-                                    selectedBranch = branch
+                            HStack(spacing: 0) {
+                                BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch) {
+                                    BranchActionsMenu(branch: branch, isRemote: true, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection)
                                 }
-                                .contextMenu {
-                                    Button {
-                                        viewModel.selectedBranchForAction = branch
-                                        viewModel.isRemoteBranchAction = true
-                                        coordinator.renameBranch(for: repo)
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "pencil.line")
-                                            Text("Rename")
-                                        }
+                                    .onTapGesture {
+                                        selectedBranch = branch
                                     }
-                                    Button {
-                                        viewModel.historyBranch = branch
-                                        selectedSection = .history
-                                        Task {
-                                            await viewModel.loadRepositoryData(for: repo)
+                                    .contextMenu {
+                                        BranchActionItems(branch: branch, isRemote: true, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection)
+                                    } preview: {
+                                        VStack(alignment: .leading, spacing: 10) {
+                                            Text(branch)
+                                                .appFont(size: 16, weight: .semibold)
                                         }
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "clock.arrow.circlepath")
-                                            Text("See History")
-                                        }
+                                        .padding(10)
                                     }
-                                    Button {
-                                        viewModel.selectedBranchForAction = branch
-                                        viewModel.isRemoteBranchAction = true
-                                        coordinator.presentDeleteBranch(for: repo)
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "trash")
-                                            Text("Delete")
-                                        }
-                                    }
-                                } preview: {
-                                    VStack(alignment: .leading, spacing: 10) {
-                                        Text(branch)
-                                            .appFont(size: 16, weight: .semibold)
-                                    }
-                                    .padding(10)
-                                }
+                            }
                         }
                         .padding(.horizontal)
                     }
@@ -315,11 +288,24 @@ struct CustomSearchBar: View {
     }
 }
 
-struct BranchText: View {
+struct BranchText<TrailingContent: View>: View {
     
     let branchName: String
     let isSelected: Bool
     let isCurrent: Bool
+    let trailingContent: TrailingContent
+
+    init(
+        branchName: String,
+        isSelected: Bool,
+        isCurrent: Bool,
+        @ViewBuilder trailingContent: () -> TrailingContent
+    ) {
+        self.branchName = branchName
+        self.isSelected = isSelected
+        self.isCurrent = isCurrent
+        self.trailingContent = trailingContent()
+    }
     
     var body: some View {
         HStack {
@@ -337,6 +323,7 @@ struct BranchText: View {
                     .padding(.vertical, 2)
                     .background(RoundedRectangle(cornerRadius: 10).opacity(0.1))
             }
+            trailingContent
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -367,50 +354,83 @@ struct LocalBranchRow: View {
     @Binding var selectedBranch: String?
 
     var body: some View {
-        BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch)
-            .onTapGesture {
-                selectedBranch = branch
+        HStack(spacing: 0) {
+            BranchText(branchName: branch, isSelected: selectedBranch == branch, isCurrent: branch == viewModel.currentBranch) {
+                BranchActionsMenu(branch: branch, isRemote: false, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection)
             }
-            .contextMenu {
-                Button {
-                    viewModel.selectedBranchForAction = branch
-                    viewModel.isRemoteBranchAction = false
-                    coordinator.renameBranch(for: repo)
-                } label: {
-                    HStack {
-                        Image(systemName: "pencil.line")
-                        Text("Rename")
-                    }
+                .onTapGesture {
+                    selectedBranch = branch
                 }
-                Button {
-                    viewModel.historyBranch = branch
-                    selectedSection = .history
-                    Task {
-                        await viewModel.loadRepositoryData(for: repo)
+                .contextMenu {
+                    BranchActionItems(branch: branch, isRemote: false, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection)
+                } preview: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(branch)
+                            .appFont(size: 16, weight: .semibold)
                     }
-                } label: {
-                    HStack {
-                        Image(systemName: "clock.arrow.circlepath")
-                        Text("See History")
-                    }
+                    .padding(10)
                 }
-                Button {
-                    viewModel.selectedBranchForAction = branch
-                    viewModel.isRemoteBranchAction = false
-                    coordinator.presentDeleteBranch(for: repo)
-                } label: {
-                    HStack {
-                        Image(systemName: "trash")
-                        Text("Delete")
-                    }
-                }
-            } preview: {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(branch)
-                        .appFont(size: 16, weight: .semibold)
-                }
-                .padding(10)
+        }
+    }
+}
+
+private struct BranchActionsMenu: View {
+    let branch: String
+    let isRemote: Bool
+    let repo: Repo
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
+    @Binding var selectedSection: RepoSection
+
+    var body: some View {
+        Menu {
+            BranchActionItems(branch: branch, isRemote: isRemote, repo: repo, viewModel: viewModel, coordinator: coordinator, selectedSection: $selectedSection)
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .help("Branch actions")
+        .accessibilityLabel("Branch actions for \(branch)")
+    }
+}
+
+private struct BranchActionItems: View {
+    let branch: String
+    let isRemote: Bool
+    let repo: Repo
+    let viewModel: MainViewModel
+    let coordinator: AppCoordinator
+    @Binding var selectedSection: RepoSection
+
+    var body: some View {
+        Group {
+            Button {
+                viewModel.selectedBranchForAction = branch
+                viewModel.isRemoteBranchAction = isRemote
+                coordinator.renameBranch(for: repo)
+            } label: {
+                Label("Rename", systemImage: "pencil.line")
             }
+            Button {
+                viewModel.historyBranch = branch
+                selectedSection = .history
+                Task {
+                    await viewModel.loadRepositoryData(for: repo)
+                }
+            } label: {
+                Label("See History", systemImage: "clock.arrow.circlepath")
+            }
+            Button {
+                viewModel.selectedBranchForAction = branch
+                viewModel.isRemoteBranchAction = isRemote
+                coordinator.presentDeleteBranch(for: repo)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 }
 
