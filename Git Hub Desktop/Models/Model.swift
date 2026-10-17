@@ -62,6 +62,22 @@ enum RepoSection: String, CaseIterable, Identifiable {
     case history
     case branches
     case stashes
+    case pullRequests
+    case actions
+    case releases
+    case repositories
+
+    enum Group: CaseIterable {
+        case git
+        case github
+
+        var title: String {
+            switch self {
+            case .git: return "Git"
+            case .github: return "GitHub"
+            }
+        }
+    }
     
     var id: String { rawValue }
     
@@ -75,6 +91,23 @@ enum RepoSection: String, CaseIterable, Identifiable {
             return "Branches"
         case .stashes:
             return "Stashes"
+        case .pullRequests:
+            return "Pull Requests"
+        case .actions:
+            return "Actions"
+        case .releases:
+            return "Releases"
+        case .repositories:
+            return "Repositories"
+        }
+    }
+
+    var group: Group {
+        switch self {
+        case .changes, .history, .branches, .stashes:
+            return .git
+        case .pullRequests, .actions, .releases, .repositories:
+            return .github
         }
     }
     
@@ -88,6 +121,14 @@ enum RepoSection: String, CaseIterable, Identifiable {
             return "point.topleft.down.curvedto.point.bottomright.up"
         case .stashes:
             return "archivebox"
+        case .pullRequests:
+            return "pull-request"
+        case .actions:
+            return "play.circle"
+        case .releases:
+            return "tag"
+        case .repositories:
+            return "externaldrive"
         }
     }
 }

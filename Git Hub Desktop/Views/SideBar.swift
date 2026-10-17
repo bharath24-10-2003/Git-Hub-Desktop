@@ -11,6 +11,7 @@ struct Sidebar: View {
     
     @Binding var selectedRepo: Repo?
     @Binding var selectedSection: RepoSection
+    @Environment(\.openSettings) private var openSettings
     
     let repos: [Repo]
     let viewModel: MainViewModel
@@ -116,45 +117,67 @@ struct Sidebar: View {
             Divider()
                 .padding(.vertical)
             
-            Text("VIEWS")
-                .appFont(.caption)
-                .foregroundStyle(.secondary)
-            
-            VStack(spacing: 4) {
-                
-                ForEach(RepoSection.allCases) { section in
-                    
-                    Button {
-                        selectedSection = section
-                        if section == .history {
-                            viewModel.historyBranch = nil
-                        }
-                        if let repo = viewModel.selectedRepo {
-                            Task {
-                                await viewModel.loadRepositoryData(for: repo)
+            ForEach(RepoSection.Group.allCases, id: \.self) { group in
+                Text(group.title.uppercased())
+                    .appFont(.caption)
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 4) {
+                    ForEach(RepoSection.allCases.filter { $0.group == group }) { section in
+                        Button {
+                            selectedSection = section
+                            if section == .history {
+                                viewModel.historyBranch = nil
                             }
+                            if group == .git, let repo = viewModel.selectedRepo {
+                                Task {
+                                    await viewModel.loadRepositoryData(for: repo)
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                if section == .pullRequests {
+                                    Image("pull-request")
+                                        .resizable()
+                                        .renderingMode(.template)
+                                        .foregroundStyle(.white)
+                                        .scaledToFit()
+                                        .frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: section.icon)
+                                }
+                                Text(section.title)
+                                    .appFont(.body)
+                                Spacer()
+                            }
+                            .padding(10)
+                            .contentShape(Rectangle())
+                            .background(
+                                selectedSection == section
+                                ? Color.blue.opacity(0.15)
+                                : Color.clear
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                    } label: {
-                        
-                        HStack {
-                            Image(systemName: section.icon)
-                            Text(section.title)
-                                .appFont(.body)
-                            Spacer()
-                        }
-                        .padding(10)
-                        .contentShape(Rectangle())
-                        .background(
-                            selectedSection == section
-                            ? Color.blue.opacity(0.15)
-                            : Color.clear
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             Spacer()
+
+            Button {
+                openSettings()
+            } label: {
+                HStack {
+                    Image(systemName: "gearshape")
+                    Text("Settings")
+                        .appFont(.body)
+                    Spacer()
+                }
+                .padding(10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
         .padding()
     }

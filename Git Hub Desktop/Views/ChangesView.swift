@@ -354,7 +354,11 @@ struct ChangesView: View {
                             if let selectedFile = viewModel.selectedFileForDiff {
                                 ZStack {
                                     if let diff = viewModel.currentDiff {
-                                        DiffRendererView(diff: diff, file: selectedFile)
+                                        DiffRendererView(
+                                            diff: diff,
+                                            file: selectedFile,
+                                            previewURL: URL(fileURLWithPath: repo.path).appendingPathComponent(selectedFile.path)
+                                        )
                                             .padding()
                                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                             .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)

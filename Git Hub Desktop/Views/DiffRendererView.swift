@@ -5,10 +5,28 @@
 
 import SwiftUI
 import Highlighter
+import QuickLookUI
 
 struct DiffRendererView: View {
     let diff: FileDiff
     let file: ChangedFile
+    var previewURL: URL? = nil
+
+    private var shouldShowQuickLook: Bool {
+        Self.shouldUseQuickLook(diff: diff, file: file)
+    }
+
+    private static let previewableExtensions: Set<String> = [
+        "png", "jpg", "jpeg", "gif", "heic", "heif", "tif", "tiff", "bmp", "ico", "webp", "svg", "icns",
+        "mov", "mp4", "m4v", "avi", "mkv", "webm", "mpg", "mpeg", "3gp",
+        "mp3", "m4a", "wav", "aiff", "aif", "flac", "ogg",
+        "pdf", "rtf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pages", "numbers", "key"
+    ]
+
+    static func shouldUseQuickLook(diff: FileDiff, file: ChangedFile) -> Bool {
+        let ext = ((file.path as NSString).pathExtension).lowercased()
+        return diff.isBinary || diff.lines.isEmpty || previewableExtensions.contains(ext)
+    }
     
     var language: String {
         let path = file.path as NSString
@@ -45,16 +63,28 @@ struct DiffRendererView: View {
             
             Divider()
             
-            GeometryReader { geometry in
-                ScrollView(showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        let lines = diff.lines.filter { $0.type != .fileHeader }
-                        ForEach(lines) { line in
-                            DiffLineView(line: line, language: language)
+            if shouldShowQuickLook, let previewURL, FileManager.default.fileExists(atPath: previewURL.path) {
+                QuickLookFilePreview(url: previewURL)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if shouldShowQuickLook {
+                ContentUnavailableView(
+                    "Preview Unavailable",
+                    systemImage: "doc.questionmark",
+                    description: Text("This file is binary or uses a format that cannot be shown as a text diff.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                GeometryReader { geometry in
+                    ScrollView(showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            let lines = diff.lines.filter { $0.type != .fileHeader }
+                            ForEach(lines) { line in
+                                DiffLineView(line: line, language: language)
+                            }
                         }
+                        .padding(.vertical, 8)
+                        .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
                     }
-                    .padding(.vertical, 8)
-                    .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
                 }
             }
         }
@@ -65,6 +95,20 @@ struct DiffRendererView: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
         )
+    }
+}
+
+private struct QuickLookFilePreview: NSViewRepresentable {
+    let url: URL
+
+    func makeNSView(context: Context) -> QLPreviewView {
+        let view = QLPreviewView(frame: .zero, style: .normal)!
+        view.previewItem = url as NSURL
+        return view
+    }
+
+    func updateNSView(_ view: QLPreviewView, context: Context) {
+        view.previewItem = url as NSURL
     }
 }
 

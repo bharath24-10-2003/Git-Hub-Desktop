@@ -102,6 +102,8 @@ class MainViewModel {
                 break // core data handles branches
             case .stashes:
                 try await loadStashes(for: repo)
+            case .pullRequests, .actions, .releases, .repositories:
+                break
             }
             
             // Update active branch name in RepoStore so it persists

@@ -18,6 +18,7 @@ struct CommitDiffDetailView: View {
     @State private var selectedFileForDiff: ChangedFile? = nil
     @State private var activeSelectedFileId: String? = nil
     @State private var currentDiff: FileDiff? = nil
+    @State private var previewURL: URL? = nil
     @State private var isLoading: Bool = true
     @State private var isDiffLoading: Bool = false
     @State private var error: String? = nil
@@ -95,7 +96,11 @@ struct CommitDiffDetailView: View {
                             if let selectedFile = selectedFileForDiff {
                                 ZStack {
                                     if let diff = currentDiff {
-                                        DiffRendererView(diff: diff, file: selectedFile)
+                                        DiffRendererView(
+                                            diff: diff,
+                                            file: selectedFile,
+                                            previewURL: previewURL
+                                        )
                                             .padding()
                                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                             .opacity(isDiffLoading ? 0.45 : 1.0)
@@ -132,6 +137,11 @@ struct CommitDiffDetailView: View {
         .task {
             await loadFiles()
             isListFocused = true
+        }
+        .onDisappear {
+            if let previewURL {
+                try? FileManager.default.removeItem(at: previewURL)
+            }
         }
     }
     
@@ -178,12 +188,24 @@ struct CommitDiffDetailView: View {
         Task {
             do {
                 let diff = try await viewModel.loadCommitDiff(hash: hash, file: file.path, at: repo)
+                let nextPreviewURL: URL?
+                if DiffRendererView.shouldUseQuickLook(diff: diff, file: file) {
+                    nextPreviewURL = try? await viewModel.service.materializeCommitFile(hash: hash, file: file.path, at: repo.path)
+                } else {
+                    nextPreviewURL = nil
+                }
                 if activeSelectedFileId == file.id {
+                    if let previewURL {
+                        try? FileManager.default.removeItem(at: previewURL)
+                    }
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                         selectedFileForDiff = file
                         currentDiff = diff
+                        previewURL = nextPreviewURL
                         isDiffLoading = false
                     }
+                } else if let nextPreviewURL {
+                    try? FileManager.default.removeItem(at: nextPreviewURL)
                 }
             } catch {
                 self.error = error.localizedDescription
