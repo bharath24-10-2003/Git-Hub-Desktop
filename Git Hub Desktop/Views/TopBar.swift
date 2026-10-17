@@ -27,7 +27,7 @@ struct TopBar: View {
                         .appFont(size: 14, weight: .light)
                         .opacity(0.5)
                     Menu {
-                        ForEach(viewModel.localBranches, id: \.self) { branch in
+                        ForEach(viewModel.recentLocalBranches, id: \.self) { branch in
                             Button {
                                 Task {
                                     do {
@@ -52,14 +52,6 @@ struct TopBar: View {
                             Text(viewModel.currentBranch.isEmpty ? repo.currentBranch : viewModel.currentBranch)
                                 .appFont(.subheadline)
                         }
-                        .background {
-                            RoundedRectangle(cornerRadius: 10)
-                                .frame(height: 28)
-                                .padding(-8)
-                                .tint(.gray)
-                                .opacity(0.2)
-                        }
-                        .padding(8)
                     }
                     Spacer()
                     

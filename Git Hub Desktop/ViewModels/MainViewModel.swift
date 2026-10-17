@@ -39,6 +39,7 @@ class MainViewModel {
     var commits: [Commit] = []
     var stashes: [GitStash] = []
     var localBranches: [String] = []
+    var recentLocalBranches: [String] = []
     var remoteBranches: [String] = []
     var tags: [String] = []
     
@@ -116,6 +117,7 @@ class MainViewModel {
         let path = repo.path
         do {
             let rawLocalBranches = try await service.getLocalBranches(at: path)
+            let rawRecentLocalBranches = try await service.getRecentLocalBranches(at: path)
             var cleanLocal: [String] = []
             var detectedCurrentBranch = "main"
             
@@ -154,6 +156,10 @@ class MainViewModel {
             let behindCount = await service.getBehindCommits(branch: detectedCurrentBranch, at: path)
             
             self.localBranches = cleanLocal
+            self.recentLocalBranches = rawRecentLocalBranches.map {
+                let branch = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                return branch.hasPrefix("* ") ? String(branch.dropFirst(2)) : branch
+            }
             self.remoteBranches = cleanRemote
             self.tags = cleanTags
             self.currentBranch = detectedCurrentBranch

@@ -507,6 +507,11 @@ nonisolated extension GitService {
         let result = try await run(["branch", "-l"], at: repo)
         return result.output.split(separator: "\n").map(String.init)
     }
+
+    func getRecentLocalBranches(at repo: String) async throws -> [String] {
+        let result = try await run(["branch", "--sort=-committerdate", "-l"], at: repo)
+        return result.output.split(separator: "\n").map(String.init)
+    }
     
     func getRemoteBranches(at repo: String) async throws -> [String] {
         let result = try await run(["branch", "-r"], at: repo)
