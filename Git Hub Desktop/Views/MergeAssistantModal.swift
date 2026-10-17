@@ -15,6 +15,11 @@ struct MergeAssistantModal: View {
     @State private var selectedFile: ChangedFile? = nil
     @State private var editedMessage: String = ""
     @State private var error: String? = nil
+
+    private var modalSize: CGSize {
+        let screenSize = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
+        return CGSize(width: screenSize.width * 0.8, height: screenSize.height * 0.8)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -86,7 +91,14 @@ struct MergeAssistantModal: View {
                                 }
                                 .frame(minHeight: 180)
                             } else {
-                                ForEach(viewModel.changedFiles) { file in
+                                ForEach(viewModel.changedFiles.sorted { first, second in
+                                    let firstIsConflicted = first.status == "Conflicted"
+                                    let secondIsConflicted = second.status == "Conflicted"
+                                    if firstIsConflicted != secondIsConflicted {
+                                        return firstIsConflicted
+                                    }
+                                    return first.path.localizedStandardCompare(second.path) == .orderedAscending
+                                }) { file in
                                     conflictedFileRow(for: file)
                                         .onTapGesture {
                                             selectedFile = file
@@ -138,7 +150,7 @@ struct MergeAssistantModal: View {
             footerToolbar
                 .padding()
         }
-        .frame(width: 1000, height: 700)
+        .frame(width: modalSize.width, height: modalSize.height)
         .onAppear {
             editedMessage = viewModel.mergeState.defaultCommitMessage
             selectedFile = nil
