@@ -211,7 +211,7 @@ nonisolated final class GitService {
 
 // MARK: - High-Level APIs
 
-nonisolated extension GitService {
+extension GitService {
     
     // Global Config
     func getGlobalConfig(key: String) async -> String? {

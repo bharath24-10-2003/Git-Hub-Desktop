@@ -15,6 +15,11 @@ struct RebaseAssistantModal: View {
     @State private var selectedFile: ChangedFile? = nil
     @State private var editedMessage: String = ""
     @State private var error: String? = nil
+
+    private var modalSize: CGSize {
+        let screenSize = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
+        return CGSize(width: screenSize.width * 0.8, height: screenSize.height * 0.8)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -100,7 +105,7 @@ struct RebaseAssistantModal: View {
                         }
                     }
                 }
-                .frame(minWidth: 250, idealWidth: 300)
+                .frame(minWidth: 220, idealWidth: modalSize.width * 0.20, maxWidth: modalSize.width * 0.30)
                 
                 // Right: Diff & Conflict Editor
                 VStack(spacing: 0) {
@@ -118,7 +123,7 @@ struct RebaseAssistantModal: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(minWidth: 350, idealWidth: 450)
+                .frame(minWidth: 400, idealWidth: modalSize.width * 0.80)
                 .background(Color(NSColor.controlBackgroundColor))
             }
             .id(viewModel.selectedFileForDiff == nil)
@@ -138,7 +143,7 @@ struct RebaseAssistantModal: View {
             footerToolbar
                 .padding()
         }
-        .frame(width: 1000, height: 700)
+        .frame(width: modalSize.width, height: modalSize.height)
         .onAppear {
             editedMessage = viewModel.rebaseState.currentCommitMessage
             selectedFile = nil

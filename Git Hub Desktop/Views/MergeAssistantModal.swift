@@ -112,7 +112,7 @@ struct MergeAssistantModal: View {
                         }
                     }
                 }
-                .frame(minWidth: 250, idealWidth: 300)
+                .frame(minWidth: 220, idealWidth: modalSize.width * 0.20, maxWidth: modalSize.width * 0.30)
                 
                 // Right: Diff & Conflict Editor
                 VStack(spacing: 0) {
@@ -130,7 +130,7 @@ struct MergeAssistantModal: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(minWidth: 350, idealWidth: 450)
+                .frame(minWidth: 400, idealWidth: modalSize.width * 0.80)
                 .background(Color(NSColor.controlBackgroundColor))
             }
             .id(viewModel.selectedFileForDiff == nil)

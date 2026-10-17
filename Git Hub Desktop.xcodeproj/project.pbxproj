@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8E0BEE78308404C4005E6ADD /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8E0BEE77308404C4005E6ADD /* MarkdownUI */; };
 		8EA253F02FE2541D00EBFF7F /* Highlighter in Frameworks */ = {isa = PBXBuildFile; productRef = 8EA253EF2FE2541D00EBFF7F /* Highlighter */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8EA253F02FE2541D00EBFF7F /* Highlighter in Frameworks */,
+				8E0BEE78308404C4005E6ADD /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = "Git Hub Desktop";
 			packageProductDependencies = (
 				8EA253EF2FE2541D00EBFF7F /* Highlighter */,
+				8E0BEE77308404C4005E6ADD /* MarkdownUI */,
 			);
 			productName = "Git Hub Desktop";
 			productReference = 8E8180602F9D33CE002BB503 /* Git Hub Desktop.app */;
@@ -102,6 +105,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				8EA253EE2FE2541D00EBFF7F /* XCRemoteSwiftPackageReference "HighlighterSwift" */,
+				8E0BEE76308404C4005E6ADD /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8E8180612F9D33CE002BB503 /* Products */;
@@ -348,6 +352,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		8E0BEE76308404C4005E6ADD /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
 		8EA253EE2FE2541D00EBFF7F /* XCRemoteSwiftPackageReference "HighlighterSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/smittytone/HighlighterSwift.git";
@@ -359,6 +371,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		8E0BEE77308404C4005E6ADD /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8E0BEE76308404C4005E6ADD /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
 		8EA253EF2FE2541D00EBFF7F /* Highlighter */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 8EA253EE2FE2541D00EBFF7F /* XCRemoteSwiftPackageReference "HighlighterSwift" */;

@@ -182,7 +182,13 @@ class MainViewModel {
         let files = try await service.status(at: path)
         self.changedFiles = files
         
-        // Clear diff if selected file no longer exists or select first file
+        // Keep a conflicted file selected during a merge so Changes can immediately show
+        // its conflict diff after the merge assistant is dismissed.
+        let defaultFile = mergeState.inProgress
+            ? (files.first(where: { $0.status == "Conflicted" }) ?? files.first)
+            : files.first
+
+        // Clear diff if selected file no longer exists or select a default file.
         if let selected = self.selectedFileForDiff {
             if let updatedFile = files.first(where: { $0.id == selected.id }) {
                 self.selectedFileForDiff = updatedFile
@@ -190,7 +196,7 @@ class MainViewModel {
                     try? await self.loadDiff(for: updatedFile, at: repo)
                 }
             } else {
-                if let firstFile = files.first {
+                if let firstFile = defaultFile {
                     self.selectedFileForDiff = firstFile
                     Task {
                         try? await self.loadDiff(for: firstFile, at: repo)
@@ -201,7 +207,7 @@ class MainViewModel {
                 }
             }
         } else {
-            if let firstFile = files.first {
+            if let firstFile = defaultFile {
                 self.selectedFileForDiff = firstFile
                 Task {
                     try? await self.loadDiff(for: firstFile, at: repo)

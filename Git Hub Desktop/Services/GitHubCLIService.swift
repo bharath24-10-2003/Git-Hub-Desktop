@@ -1,6 +1,6 @@
 import Foundation
 
-struct GitHubCLIResult {
+nonisolated struct GitHubCLIResult {
     let output: String
     let exitCode: Int32
 
@@ -44,10 +44,78 @@ nonisolated final class GitHubCLIService {
         try await run(["auth", "logout", "--hostname", host, "--user", account])
     }
 
-    private func run(_ arguments: [String]) async throws -> GitHubCLIResult {
+    func listReleases(in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run([
+            "release", "list",
+            "--limit", "100",
+            "--json", "name,tagName,isDraft,isPrerelease,isLatest,publishedAt,createdAt,isImmutable"
+        ], at: repositoryPath)
+    }
+
+    func releaseDetails(tag: String, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run([
+            "release", "view", tag,
+            "--json", "name,tagName,isDraft,isPrerelease,isImmutable,targetCommitish,publishedAt,createdAt,author,body,assets,url,tarballUrl,zipballUrl"
+        ], at: repositoryPath)
+    }
+
+    func createRelease(
+        tag: String,
+        title: String,
+        notes: String,
+        targetBranch: String,
+        generateNotes: Bool,
+        isDraft: Bool,
+        isPrerelease: Bool,
+        in repositoryPath: String
+    ) async throws -> GitHubCLIResult {
+        var arguments = ["release", "create", tag, "--target", targetBranch]
+        if !title.isEmpty {
+            arguments.append(contentsOf: ["--title", title])
+        }
+        if generateNotes {
+            arguments.append("--generate-notes")
+            if !notes.isEmpty {
+                arguments.append(contentsOf: ["--notes", notes])
+            }
+        } else {
+            arguments.append(contentsOf: ["--notes", notes])
+        }
+        if isDraft { arguments.append("--draft") }
+        if isPrerelease { arguments.append("--prerelease") }
+        return try await run(arguments, at: repositoryPath)
+    }
+
+    func editRelease(
+        tag: String,
+        title: String,
+        notes: String,
+        targetBranch: String,
+        isDraft: Bool,
+        isPrerelease: Bool,
+        in repositoryPath: String
+    ) async throws -> GitHubCLIResult {
+        try await run([
+            "release", "edit", tag,
+            "--title", title,
+            "--notes", notes,
+            "--target", targetBranch,
+            "--draft=\(isDraft)",
+            "--prerelease=\(isPrerelease)"
+        ], at: repositoryPath)
+    }
+
+    func deleteRelease(tag: String, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["release", "delete", tag, "--yes"], at: repositoryPath)
+    }
+
+    private func run(_ arguments: [String], at directory: String? = nil) async throws -> GitHubCLIResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = ["gh"] + arguments
+        if let directory {
+            process.currentDirectoryURL = URL(fileURLWithPath: directory, isDirectory: true)
+        }
 
         var environment = ProcessInfo.processInfo.environment
         let defaultPaths = [
