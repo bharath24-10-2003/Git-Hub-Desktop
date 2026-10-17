@@ -25,4 +25,5 @@ struct FileDiff: Equatable {
     let lines: [DiffLine]
     let isNewFile: Bool
     let isDeletedFile: Bool
+    let isBinary: Bool
 }

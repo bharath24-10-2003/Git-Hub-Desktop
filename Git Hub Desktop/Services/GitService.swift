@@ -380,6 +380,55 @@ nonisolated extension GitService {
         }
         return parseDiff(result.output)
     }
+
+    func materializeCommitFile(hash: String, file: String, at repo: String) async throws -> URL {
+        let previewFolder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GitHubDesktopPreviews", isDirectory: true)
+        try FileManager.default.createDirectory(at: previewFolder, withIntermediateDirectories: true)
+
+        let fileExtension = (file as NSString).pathExtension
+        let previewURL = previewFolder
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(fileExtension)
+        guard FileManager.default.createFile(atPath: previewURL.path, contents: nil) else {
+            throw GitError.executionFailed("Could not create a temporary file preview.")
+        }
+
+        let outputHandle: FileHandle
+        do {
+            outputHandle = try FileHandle(forWritingTo: previewURL)
+        } catch {
+            try? FileManager.default.removeItem(at: previewURL)
+            throw error
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: gitPath)
+        process.arguments = ["show", "\(hash):\(file)"]
+        process.currentDirectoryURL = URL(fileURLWithPath: repo)
+        process.standardOutput = outputHandle
+        process.standardError = FileHandle.nullDevice
+
+        return try await withCheckedThrowingContinuation { continuation in
+            process.terminationHandler = { process in
+                try? outputHandle.close()
+                if process.terminationStatus == 0 {
+                    continuation.resume(returning: previewURL)
+                } else {
+                    try? FileManager.default.removeItem(at: previewURL)
+                    continuation.resume(throwing: GitError.executionFailed("Could not load this file from the selected commit."))
+                }
+            }
+
+            do {
+                try process.run()
+            } catch {
+                try? outputHandle.close()
+                try? FileManager.default.removeItem(at: previewURL)
+                continuation.resume(throwing: error)
+            }
+        }
+    }
     
     // Diff
     func getDiff(for file: String, isStaged: Bool, at repo: String) async throws -> FileDiff {
@@ -405,6 +454,7 @@ nonisolated extension GitService {
         var newLine: Int? = nil
         var isNewFile = false
         var isDeletedFile = false
+        let isBinary = output.contains("Binary files ") || output.contains("GIT binary patch")
         
         for line in lines {
             if line.hasPrefix("diff --git") {
@@ -447,7 +497,7 @@ nonisolated extension GitService {
             }
         }
         
-        return FileDiff(lines: diffLines, isNewFile: isNewFile, isDeletedFile: isDeletedFile)
+        return FileDiff(lines: diffLines, isNewFile: isNewFile, isDeletedFile: isDeletedFile, isBinary: isBinary)
     }
     
     @discardableResult

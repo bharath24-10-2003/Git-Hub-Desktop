@@ -26,6 +26,8 @@ struct BodyView: View {
                     BranchesView(repo: repo, viewModel: viewModel, selectedSection: $section, coordinator: coordinator)
                 case .stashes:
                     StashesView(repo: repo, viewModel: viewModel, coordinator: coordinator)
+                case .pullRequests, .actions, .releases, .repositories:
+                    GitHubSectionPlaceholder(section: section)
                 }
             } else {
                 VStack(spacing: 20) {
@@ -39,6 +41,25 @@ struct BodyView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct GitHubSectionPlaceholder: View {
+    let section: RepoSection
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: section.icon)
+                .appFont(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(section.title)
+                .appFont(.title2)
+                .fontWeight(.semibold)
+            Text("GitHub CLI integration is coming soon.")
+                .appFont(.body)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

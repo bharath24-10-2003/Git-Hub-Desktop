@@ -293,7 +293,11 @@ struct RebaseAssistantModal: View {
             // Diff Content
             ZStack {
                 if let diff = viewModel.currentDiff {
-                    DiffRendererView(diff: diff, file: file)
+                    DiffRendererView(
+                        diff: diff,
+                        file: file,
+                        previewURL: URL(fileURLWithPath: repo.path).appendingPathComponent(file.path)
+                    )
                         .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
                         .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
                         .id(file.id + "_" + (file.isStaged ? "staged" : "unstaged"))
