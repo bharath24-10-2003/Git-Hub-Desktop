@@ -342,9 +342,14 @@ struct BranchText: View {
         .padding(.vertical, 8)
         .overlay {
             if isSelected {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.blue, lineWidth: 1.5)
-                    .padding(1)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .foregroundStyle(.gray)
+                        .opacity(0.2)
+                    
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.blue, lineWidth: 1.5)
+                }
             } else {
                 RoundedRectangle(cornerRadius: 10)
                     .opacity(0.1)
