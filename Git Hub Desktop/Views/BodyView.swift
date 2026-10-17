@@ -26,7 +26,9 @@ struct BodyView: View {
                     BranchesView(repo: repo, viewModel: viewModel, selectedSection: $section, coordinator: coordinator)
                 case .stashes:
                     StashesView(repo: repo, viewModel: viewModel, coordinator: coordinator)
-                case .pullRequests, .actions, .releases, .repositories:
+                case .releases:
+                    GitHubReleasesView(repo: repo)
+                case .pullRequests, .actions, .repositories:
                     GitHubSectionPlaceholder(section: section)
                 }
             } else {

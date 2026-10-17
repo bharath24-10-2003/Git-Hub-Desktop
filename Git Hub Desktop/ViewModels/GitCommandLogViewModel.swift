@@ -38,7 +38,7 @@ class GitCommandLogViewModel {
         }
     }
     
-    nonisolated func parseAndAppend(_ text: String) {
+    func parseAndAppend(_ text: String) {
         Task {
             await self.parser?.append(text)
         }

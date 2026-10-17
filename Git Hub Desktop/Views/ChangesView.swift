@@ -53,6 +53,7 @@ struct ChangesView: View {
                         .padding(.horizontal)
                     }
                     modifiedSection
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
@@ -347,43 +348,50 @@ struct ChangesView: View {
                     .onMoveCommand { direction in
                         handleMove(direction)
                     }
+                    .frame(maxHeight: .infinity)
                     
-                    if viewModel.selectedFileForDiff != nil {
+                    if let selectedFile = viewModel.selectedFileForDiff {
                         // Right: Diff View
                         VStack {
-                            if let selectedFile = viewModel.selectedFileForDiff {
-                                ZStack {
-                                    if let diff = viewModel.currentDiff {
-                                        DiffRendererView(
-                                            diff: diff,
-                                            file: selectedFile,
-                                            previewURL: URL(fileURLWithPath: repo.path).appendingPathComponent(selectedFile.path)
-                                        )
-                                            .padding()
-                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                            .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
-                                            .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
-                                            .animation(.easeInOut, value: viewModel.isDiffLoading)
-                                            .id(selectedFile.id)
-                                            .transition(.asymmetric(
-                                                insertion: .move(edge: .trailing).combined(with: .opacity),
-                                                removal: .move(edge: .leading).combined(with: .opacity)
-                                            ))
-                                    }
-                                    
-                                    if viewModel.isDiffLoading {
-                                        ProgressView()
-                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                            .transition(.opacity)
-                                    }
+                            ZStack {
+                                if let diff = viewModel.currentDiff {
+                                    DiffRendererView(
+                                        diff: diff,
+                                        file: selectedFile,
+                                        previewURL: URL(fileURLWithPath: repo.path).appendingPathComponent(selectedFile.path)
+                                    )
+                                        .padding()
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                        .opacity(viewModel.isDiffLoading ? 0.45 : 1.0)
+                                        .blur(radius: viewModel.isDiffLoading ? 0.8 : 0)
+                                        .animation(.easeInOut, value: viewModel.isDiffLoading)
+                                        .id(selectedFile.id)
+                                        .transition(.asymmetric(
+                                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                                            removal: .move(edge: .leading).combined(with: .opacity)
+                                        ))
+                                }
+
+                                if viewModel.isDiffLoading {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .transition(.opacity)
                                 }
                             }
                         }
-                        .frame(minWidth: 500)
+                        .frame(minWidth: 500, maxHeight: .infinity)
                         .background(Color(NSColor.controlBackgroundColor))
                         .transition(.move(edge: .trailing).combined(with: .opacity))
+                    } else if viewModel.mergeState.inProgress {
+                        ContentUnavailableView(
+                            "Select a File",
+                            systemImage: "doc.text.magnifyingglass",
+                            description: Text("Choose a conflicted file or another changed file to view its diff.")
+                        )
+                        .frame(minWidth: 500, maxHeight: .infinity)
                     }
                 }
+                .frame(maxHeight: .infinity)
             }
         }
         .overlay {
