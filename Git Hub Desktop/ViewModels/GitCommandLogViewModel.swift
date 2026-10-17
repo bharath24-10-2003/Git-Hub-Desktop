@@ -44,7 +44,6 @@ class GitCommandLogViewModel {
         }
     }
     
-    @MainActor
     private func handleFlush(rawText: String, lines: [String], incompleteLine: String) {
         self.rawLogText += rawText
         
