@@ -50,7 +50,7 @@ struct BranchesView: View {
                 TitleView(title: "Branches", desc: "Manage your Local and Remote branches here.")
                 Spacer()
                 if let selected = selectedBranch, selected != viewModel.currentBranch {
-                    BaseButton(title: "Switch to '\(selected)'") {
+                    ProminentBaseButton(title: "Switch to '\(selected)'") {
                         self.error = nil
                         Task {
                             do {
@@ -71,7 +71,7 @@ struct BranchesView: View {
                     }
                 }
                 
-                ProminentBaseButton(title: "New Branch", image: Image(.plus)) {
+                BaseButton(title: "New Branch", image: Image(.plus), keyboardShortcut: nil) {
                     viewModel.selectedBranchForAction = selectedBranch
                     coordinator.presentNewBranch(for: repo)
                 }

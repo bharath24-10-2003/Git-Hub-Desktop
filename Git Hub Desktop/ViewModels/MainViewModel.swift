@@ -637,8 +637,13 @@ class MainViewModel {
         self.isLoading = true
         defer { self.isLoading = false }
         let result: GitResult
-        if remoteBranches.contains(branch) && !localBranches.contains(branch) {
-            result = try await service.checkout(branch: branch, trackRemote: true, at: repo.path)
+        if remoteBranches.contains(branch) {
+            let localBranchName = branch.split(separator: "/", maxSplits: 1).dropFirst().joined(separator: "/")
+            if localBranches.contains(localBranchName) {
+                result = try await service.checkout(branch: localBranchName, at: repo.path)
+            } else {
+                result = try await service.checkout(branch: branch, trackRemote: true, at: repo.path)
+            }
         } else {
             result = try await service.checkout(branch: branch, at: repo.path)
         }
