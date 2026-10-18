@@ -109,6 +109,45 @@ nonisolated final class GitHubCLIService {
         try await run(["release", "delete", tag, "--yes"], at: repositoryPath)
     }
 
+    func listPullRequests(state: String = "open", in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run([
+            "pr", "list",
+            "--state", state,
+            "--limit", "100",
+            "--json", "number,title,state,url,author,headRefName,baseRefName,isDraft,createdAt,updatedAt,mergedAt,reviewDecision"
+        ], at: repositoryPath)
+    }
+
+    func pullRequestDetails(number: Int, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run([
+            "pr", "view", String(number),
+            "--json", "number,title,body,state,url,author,headRefName,baseRefName,isDraft,createdAt,updatedAt,mergedAt,reviewDecision,mergeStateStatus,additions,deletions,changedFiles,commits"
+        ], at: repositoryPath)
+    }
+
+    func createPullRequest(
+        title: String,
+        body: String,
+        baseBranch: String,
+        headBranch: String,
+        isDraft: Bool,
+        in repositoryPath: String
+    ) async throws -> GitHubCLIResult {
+        var arguments = [
+            "pr", "create",
+            "--base", baseBranch,
+            "--head", headBranch,
+            "--title", title,
+            "--body", body
+        ]
+        if isDraft { arguments.append("--draft") }
+        return try await run(arguments, at: repositoryPath)
+    }
+
+    func defaultBranch(in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"], at: repositoryPath)
+    }
+
     private func run(_ arguments: [String], at directory: String? = nil) async throws -> GitHubCLIResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")

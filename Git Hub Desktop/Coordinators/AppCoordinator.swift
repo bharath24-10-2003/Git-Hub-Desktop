@@ -19,6 +19,7 @@ enum AppSheet: Identifiable, Equatable {
     case mergeAssistant(Repo)
     case stash(Repo)
     case cherryPick(Repo)
+    case branchSwitch(String, Repo)
     
     var id: String {
         switch self {
@@ -32,6 +33,7 @@ enum AppSheet: Identifiable, Equatable {
         case .mergeAssistant(let repo): return "mergeAssistant-\(repo.id)"
         case .stash(let repo): return "stash-\(repo.id)"
         case .cherryPick(let repo): return "cherryPick-\(repo.id)"
+        case .branchSwitch(let branch, let repo): return "branchSwitch-\(repo.id)-\(branch)"
         }
     }
 }
@@ -84,6 +86,10 @@ final class AppCoordinator {
     
     func presentCherryPick(for repo: Repo) {
         activeSheet = .cherryPick(repo)
+    }
+
+    func presentBranchSwitch(branch: String, for repo: Repo) {
+        activeSheet = .branchSwitch(branch, repo)
     }
     
     func dismissSheet() {

@@ -26,16 +26,13 @@ struct GitHubReleasesView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "tag")
-                    .foregroundStyle(.secondary)
-                Text("Releases")
                     .appFont(.title2)
-                    .fontWeight(.semibold)
-                Text(repo.name)
-                    .appFont(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .fontWeight(.bold)
+                Text("Releases")
+                    .appFont(.title)
+                    .fontWeight(.bold)
                 Spacer()
-                ProminentBaseButton(title: "New Release", image: Image(systemName: "plus")) {
+                ProminentBaseButton(title: "New Release", image: Image(.plus)) {
                     showingCreateRelease = true
                 }
                 BaseButton(title: "Refresh", image: Image(systemName: "arrow.clockwise")) {
@@ -133,15 +130,16 @@ struct GitHubReleasesView: View {
                     VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .firstTextBaseline, spacing: 6) {
                                 Text(release.displayTitle)
-                                    .appFont(.headline)
+                                    .appFont(.title3)
+                                    .fontWeight(.semibold)
                                     .lineLimit(2)
                                 Spacer(minLength: 4)
                                 if isLatest(release) {
                                     releaseBadge("Latest", color: .green)
                                 }
                             }
-                            Text(release.tagName)
-                                .appFont(.caption, design: .monospaced)
+                            Text("Tag: \(release.tagName)")
+                                .appFont(.caption)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                             HStack(spacing: 8) {
@@ -153,8 +151,8 @@ struct GitHubReleasesView: View {
                                 }
                                 if let date = release.displayDate {
                                     Text(date)
-                                        .appFont(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .appFont(.callout)
+                                        .foregroundStyle(.white)
                                 }
                             }
                         }
@@ -190,7 +188,7 @@ struct GitHubReleasesView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            BaseButton(title: "Edit", image: Image(systemName: "pencil")) {
+                            BaseButton(title: "Edit", image: Image(systemName: "pencil"), textTint: .blue) {
                                 releaseToEdit = release
                             }
                             BaseButton(title: "Delete", image: Image(systemName: "trash"), textTint: .red) {
@@ -220,12 +218,29 @@ struct GitHubReleasesView: View {
                             }
                         }
 
-                        HStack(spacing: 14) {
+                        HStack(spacing: 3) {
+                            if let commit = release.targetCommitish {
+                                Text("Release Branch/Commit:")
+                                    .foregroundStyle(.secondary)
+                                Text(commit)
+                                    .fontWeight(.semibold)
+                                    .padding(.vertical, 1)
+                                    .padding(.horizontal, 10)
+                                    .background(.green.opacity(0.2), in: Capsule())
+                            }
+                        }
+                        HStack(spacing: 7) {
                             if let date = release.displayDate {
                                 Label("Published \(date)", systemImage: "calendar")
+                                    .padding(.vertical, 2)
+                                    .padding(.horizontal, 4)
+                                    .background(.secondary.opacity(0.3), in: RoundedRectangle(cornerRadius: 5))
                             }
                             if let author = release.author?.displayName {
                                 Label(author, systemImage: "person")
+                                    .padding(.vertical, 2)
+                                    .padding(.horizontal, 4)
+                                    .background(.secondary.opacity(0.3), in: RoundedRectangle(cornerRadius: 5))
                             }
                         }
                         .appFont(.caption)

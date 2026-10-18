@@ -606,12 +606,15 @@ extension GitService {
         try await run(["cherry-pick", "--skip"], at: repo)
     }
     
-    func stash(at repo: String, message: String? = nil) async throws -> GitResult {
-        if let message {
-            return try await run(["stash","-m", message], at: repo)
-        } else {
-            return try await run(["stash"], at: repo)
+    func stash(at repo: String, message: String? = nil, includeUntracked: Bool = false) async throws -> GitResult {
+        var args = ["stash", "push"]
+        if includeUntracked {
+            args.append("--include-untracked")
         }
+        if let message {
+            args.append(contentsOf: ["-m", message])
+        }
+        return try await run(args, at: repo)
     }
     
     func popStash(at repo: String,  id: String? = nil) async throws -> GitResult {
@@ -832,6 +835,12 @@ extension GitService {
     func discardChanges(at repo: String) async throws -> GitResult {
         let restoreResult = try await run(["restore", "."], at: repo)
         guard restoreResult.isSuccess else { return restoreResult }
+        return try await run(["clean", "-df"], at: repo)
+    }
+
+    func discardAllChangesForBranchSwitch(at repo: String) async throws -> GitResult {
+        let resetResult = try await run(["reset", "--hard", "HEAD"], at: repo)
+        guard resetResult.isSuccess else { return resetResult }
         return try await run(["clean", "-df"], at: repo)
     }
     

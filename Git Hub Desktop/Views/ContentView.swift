@@ -67,6 +67,8 @@ struct ContentView: View {
                 })
             case .cherryPick(let repo):
                 HistoryCherryPickModal(viewModel: coordinator.viewModel, repo: repo, coordinator: coordinator)
+            case .branchSwitch(let branch, let repo):
+                BranchSwitchConfirmationModal(branch: branch, repo: repo, viewModel: coordinator.viewModel, coordinator: coordinator)
             }
         }
         .sheet(isPresented: $coordinator.viewModel.isLoading) {

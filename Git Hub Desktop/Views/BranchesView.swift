@@ -54,11 +54,11 @@ struct BranchesView: View {
                         self.error = nil
                         Task {
                             do {
-                                let result = try await viewModel.checkout(branch: selected, at: repo)
-                                if result.isSuccess == true {
-                                    selectedBranch = nil
+                                let needsConfirmation = try await viewModel.requestBranchSwitch(branch: selected, at: repo)
+                                if needsConfirmation {
+                                    coordinator.presentBranchSwitch(branch: selected, for: repo)
                                 } else {
-                                    self.error = viewModel.errorMessage
+                                    selectedBranch = nil
                                 }
                             } catch {
                                 self.error = error.localizedDescription

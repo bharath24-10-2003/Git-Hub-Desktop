@@ -243,6 +243,7 @@ struct BaseButton: View {
                     .padding(.trailing, -6)
                     .padding(.leading, 13)
                     .appFont(.headline)
+                    .foregroundStyle(textTint)
             }
             Text(title)
                 .appFont(.subheadline, weight: .medium)
@@ -250,10 +251,10 @@ struct BaseButton: View {
                 .padding(.vertical,6)
                 .foregroundColor(textTint)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 100))
         .controlSize(.regular)
         .overlay {
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 100)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
         .buttonStyle(.bordered)
@@ -288,10 +289,10 @@ struct ProminentBaseButton: View{
                 .padding(.vertical,6)
                 .foregroundColor(textTint)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 100))
         .controlSize(.regular)
         .overlay {
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 100)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         }
         .buttonStyle(.borderedProminent)

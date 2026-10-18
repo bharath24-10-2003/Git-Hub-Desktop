@@ -655,6 +655,42 @@ class MainViewModel {
         await loadRepositoryData(for: repo)
         return result
     }
+
+    func requestBranchSwitch(branch: String, at repo: Repo) async throws -> Bool {
+        let currentChanges = try await service.status(at: repo.path)
+        changedFiles = currentChanges
+        guard !currentChanges.isEmpty else {
+            _ = try await checkout(branch: branch, at: repo)
+            return false
+        }
+        return true
+    }
+
+    func finishBranchSwitch(
+        stashingChanges: Bool,
+        applyStashAfterSwitch: Bool = false,
+        branch: String,
+        at repo: Repo
+    ) async throws {
+        if stashingChanges {
+            let result = try await service.stash(at: repo.path, includeUntracked: true)
+            guard result.isSuccess else {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
+        } else {
+            let result = try await service.discardAllChangesForBranchSwitch(at: repo.path)
+            guard result.isSuccess else {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
+        }
+        _ = try await checkout(branch: branch, at: repo)
+        if stashingChanges && applyStashAfterSwitch {
+            let result = try await service.popStash(at: repo.path)
+            guard result.isSuccess else {
+                throw GitError.executionFailed(extractErrorMessage(from: result))
+            }
+        }
+    }
     
     @discardableResult
     func createBranch(name: String, from sourceBranch: String? = nil, at repo: Repo) async throws -> GitResult {

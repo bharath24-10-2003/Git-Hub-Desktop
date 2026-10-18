@@ -32,7 +32,9 @@ struct TopBar: View {
                             Button {
                                 Task {
                                     do {
-                                        try await viewModel.checkout(branch: branch, at: repo)
+                                        if try await viewModel.requestBranchSwitch(branch: branch, at: repo) {
+                                            coordinator.presentBranchSwitch(branch: branch, for: repo)
+                                        }
                                     } catch {
                                         self.error = error.localizedDescription
                                     }
