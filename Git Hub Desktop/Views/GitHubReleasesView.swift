@@ -152,7 +152,7 @@ struct GitHubReleasesView: View {
                                 if let date = release.displayDate {
                                     Text(date)
                                         .appFont(.callout)
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                 }
                             }
                         }
@@ -163,9 +163,10 @@ struct GitHubReleasesView: View {
                         selectedTag = release.tagName
                     }
                     .tag(release.tagName)
+                    .listRowSeparator(.hidden)
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.inset)
         }
     }
 

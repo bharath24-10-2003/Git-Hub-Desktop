@@ -23,7 +23,7 @@ struct GitHubPullRequestsView: View {
                 Image(.pullRequest)
                     .resizable()
                     .renderingMode(.template)
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(.primary)
                     .frame(width: 20, height: 20)
                 Text("Pull Requests")
                     .appFont(.title)
@@ -109,14 +109,19 @@ struct GitHubPullRequestsView: View {
         List(selection: $selectedNumber) {
                 ForEach(pullRequests) { pullRequest in
                     VStack(alignment: .leading, spacing: 7) {
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        HStack(alignment: .center, spacing: 6) {
                             Text("#\(pullRequest.number)")
-                                .appFont(.caption, design: .monospaced)
-                                .foregroundStyle(.secondary)
+                                .appFont(.title2)
+                                .fontWeight(.bold)
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .background(.secondary.opacity(0.2), in: Capsule())
                             Text(pullRequest.title)
-                                .appFont(.headline)
-                                .lineLimit(2)
+                                .appFont(.title3)
+                                .fontWeight(.semibold)
+                                .lineLimit(3)
                         }
+                        Divider()
                         HStack(spacing: 6) {
                             Label(pullRequest.displayState, systemImage: stateIcon(for: pullRequest))
                                 .foregroundStyle(stateColor(for: pullRequest))
@@ -128,7 +133,7 @@ struct GitHubPullRequestsView: View {
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
-                        .appFont(.caption)
+                        .appFont(.callout)
                         HStack(spacing: 8) {
                             if let author = pullRequest.author?.login {
                                 Text("by @\(author)")
@@ -141,20 +146,29 @@ struct GitHubPullRequestsView: View {
                         .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 5)
-                    .contentShape(Rectangle())
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 15)
+                    .background {
+                        if selectedNumber != pullRequest.number {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.secondary.opacity(0.07))
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                     .onTapGesture { selectedNumber = pullRequest.number }
                     .tag(pullRequest.number)
                 }
         }
-        .listStyle(.sidebar)
+        .listStyle(.inset)
         .overlay(alignment: .top) {
             if isLoading {
                 ProgressView()
-                    .controlSize(.small)
-                    .padding(8)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background {
+                        Color.secondary
+                            .opacity(0.2)
+                    }
             }
         }
     }
@@ -190,13 +204,21 @@ struct GitHubPullRequestsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 7) {
-                            Text(pullRequest.title)
-                                .appFont(.title)
-                                .fontWeight(.bold)
-                            Text("#\(pullRequest.number) · \(pullRequest.displayState)")
+                            HStack {
+                                Text("#\(pullRequest.number)")
+                                    .appFont(.title)
+                                    .fontWeight(.bold)
+                                    .underline()
+                                    .foregroundStyle(.blue)
+                                Text(pullRequest.title)
+                                    .appFont(.title)
+                                    .fontWeight(.bold)
+                            }
+                            Text("· \(pullRequest.displayState)")
                                 .appFont(.subheadline)
                                 .foregroundStyle(stateColor(for: pullRequest))
                         }
+                        .textSelection(.enabled)
                         Spacer()
                         if let url = pullRequest.url {
                             BaseButton(title: "View on GitHub", image: Image(systemName: "arrow.up.right.square")) {
@@ -254,7 +276,7 @@ struct GitHubPullRequestsView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Description")
                                 .appFont(.headline)
-                            Markdown(body)
+                            Markdown(renderableMarkdown(body))
                                 .markdownTheme(.docC)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -317,6 +339,14 @@ struct GitHubPullRequestsView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func renderableMarkdown(_ body: String) -> String {
+        body
+            .replacingOccurrences(of: #"<!--[\s\S]*?-->"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"<br\s*/?>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"</?p>"#, with: "\n\n", options: .regularExpression)
+            .replacingOccurrences(of: #"</?sup>"#, with: "", options: .regularExpression)
     }
 
     private func loadDetails(for number: Int) async {

@@ -140,7 +140,7 @@ struct Sidebar: View {
                                     Image("pull-request")
                                         .resizable()
                                         .renderingMode(.template)
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                         .scaledToFit()
                                         .frame(width: 16, height: 16)
                                 } else {
