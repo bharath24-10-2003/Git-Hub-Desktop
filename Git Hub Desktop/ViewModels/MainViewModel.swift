@@ -65,7 +65,7 @@ class MainViewModel {
     
     var selectedBranchForAction: String? = nil
     var isRemoteBranchAction: Bool = false
-    var activeSection: RepoSection = .changes
+    var activeSection: RepoSection = .pullRequests
     
     init () {
         self.service = GitService()

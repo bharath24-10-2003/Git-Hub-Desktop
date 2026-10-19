@@ -121,8 +121,56 @@ nonisolated final class GitHubCLIService {
     func pullRequestDetails(number: Int, in repositoryPath: String) async throws -> GitHubCLIResult {
         try await run([
             "pr", "view", String(number),
-            "--json", "number,title,body,state,url,author,headRefName,baseRefName,isDraft,createdAt,updatedAt,mergedAt,reviewDecision,mergeStateStatus,additions,deletions,changedFiles,commits"
+            "--json", "number,title,body,state,url,author,headRefName,baseRefName,isDraft,createdAt,updatedAt,mergedAt,reviewDecision,mergeStateStatus,additions,deletions,changedFiles,commits,comments,reviews,files"
         ], at: repositoryPath)
+    }
+
+    func pullRequestDiff(number: Int, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["pr", "diff", String(number), "--color", "never"], at: repositoryPath)
+    }
+
+    func pullRequestReviewComments(number: Int, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run([
+            "api", "--paginate", "--slurp",
+            "repos/{owner}/{repo}/pulls/\(number)/comments"
+        ], at: repositoryPath)
+    }
+
+    func replyToPullRequestReviewComment(
+        number: Int,
+        commentID: Int,
+        body: String,
+        in repositoryPath: String
+    ) async throws -> GitHubCLIResult {
+        try await run([
+            "api", "repos/{owner}/{repo}/pulls/\(number)/comments/\(commentID)/replies",
+            "--method", "POST",
+            "-f", "body=\(body)"
+        ], at: repositoryPath)
+    }
+
+    func commentOnPullRequest(number: Int, body: String, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["pr", "comment", String(number), "--body", body], at: repositoryPath)
+    }
+
+    func closePullRequest(number: Int, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["pr", "close", String(number)], at: repositoryPath)
+    }
+
+    func mergePullRequest(number: Int, method: String, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["pr", "merge", String(number), "--\(method)"], at: repositoryPath)
+    }
+
+    func searchReviewers(query: String, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run([
+            "api", "search/users",
+            "-f", "q=\(query) in:login",
+            "--jq", "[.items[] | {login: .login, avatar_url: .avatar_url}]"
+        ], at: repositoryPath)
+    }
+
+    func addReviewer(_ login: String, toPullRequest number: Int, in repositoryPath: String) async throws -> GitHubCLIResult {
+        try await run(["pr", "edit", String(number), "--add-reviewer", login], at: repositoryPath)
     }
 
     func createPullRequest(
