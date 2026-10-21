@@ -29,7 +29,11 @@ struct BodyView: View {
                 case .releases:
                     GitHubReleasesView(repo: repo)
                 case .pullRequests:
-                    GitHubPullRequestsView(repo: repo)
+                    GitHubPullRequestsView(
+                        repo: repo,
+                        currentBranch: viewModel.currentBranch,
+                        remoteBranches: viewModel.remoteBranches
+                    )
                 case .actions, .repositories:
                     GitHubSectionPlaceholder(section: section)
                 }
