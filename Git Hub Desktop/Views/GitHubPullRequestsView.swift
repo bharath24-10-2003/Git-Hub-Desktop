@@ -4,6 +4,8 @@ import MarkdownUI
 
 struct GitHubPullRequestsView: View {
     let repo: Repo
+    let currentBranch: String
+    let remoteBranches: [String]
     @State private var pullRequests: [GitHubPullRequest] = []
     @State private var selectedNumber: Int?
     @State private var selectedPullRequest: GitHubPullRequest?
@@ -120,7 +122,11 @@ struct GitHubPullRequestsView: View {
             Task { await loadFileDiff(for: selectedNumber) }
         }
         .sheet(isPresented: $showingCreateSheet) {
-            GitHubPullRequestEditorSheet(repo: repo) { createdNumber in
+            GitHubPullRequestEditorSheet(
+                repo: repo,
+                currentBranch: currentBranch,
+                remoteBranches: remoteBranches
+            ) { createdNumber in
                 if stateFilter == "open" {
                     await loadPullRequests(selecting: createdNumber)
                 } else {
@@ -1092,10 +1098,14 @@ private struct GitHubPullRequestEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let repo: Repo
+    let currentBranch: String
+    let remoteBranches: [String]
     let onCreated: (Int?) async -> Void
     @State private var title = ""
     @State private var bodyText = ""
     @State private var baseBranch = ""
+    @State private var baseBranchSearchText = ""
+    @State private var isBaseBranchPickerPresented = false
     @State private var isDraft = false
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -1112,37 +1122,49 @@ private struct GitHubPullRequestEditorSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("Title", text: $title)
-                .textFieldStyle(.roundedBorder)
+            CustomTextField(url: $title, imageName: "text.alignleft", placeholder: "Pull request title")
 
-            HStack(spacing: 12) {
+            HStack(spacing: 30) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Base")
                         .appFont(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("Base branch", text: $baseBranch)
-                        .textFieldStyle(.roundedBorder)
+                    BaseButton(
+                        title: baseBranch.isEmpty ? "Select base branch" : baseBranch,
+                        image: Image(systemName: "arrow.triangle.branch")
+                    ) {
+                        baseBranchSearchText = ""
+                        isBaseBranchPickerPresented = true
+                    }
+                    .animation(.snappy, value: baseBranch)
+                    .lineLimit(1)
+                    .popover(isPresented: $isBaseBranchPickerPresented, arrowEdge: .bottom) {
+                        baseBranchPicker
+                    }
                 }
                 Image(systemName: "arrow.left")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
+                    .fontWeight(.bold)
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Compare")
                         .appFont(.caption)
                         .foregroundStyle(.secondary)
-                    Text(repo.currentBranch)
-                        .fontDesign(.monospaced)
-                        .lineLimit(1)
-                        .padding(.vertical, 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    BaseButton(title: currentBranch.isEmpty ? repo.currentBranch : currentBranch, image: nil) {}
+                    .disabled(true)
                 }
             }
 
-            TextEditor(text: $bodyText)
-                .frame(minHeight: 220)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.25))
-                }
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Description")
+                    .appFont(.title3)
+                    .foregroundStyle(.primary)
+                TextEditor(text: $bodyText)
+                    .frame(minHeight: 220)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.25))
+                    }
+            }
 
             Toggle("Create as draft", isOn: $isDraft)
                 .toggleStyle(.checkbox)
@@ -1167,10 +1189,80 @@ private struct GitHubPullRequestEditorSheet: View {
         .task { await loadDefaultBranch() }
     }
 
+    private var baseBranchPicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("Search remote branches", text: $baseBranchSearchText)
+                .textFieldStyle(.roundedBorder)
+
+            if filteredBaseBranches.isEmpty {
+                ContentUnavailableView(
+                    "No Matching Branches",
+                    systemImage: "arrow.triangle.branch",
+                    description: Text("No remote branch matches your search.")
+                )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 2) {
+                        ForEach(filteredBaseBranches, id: \.self) { branch in
+                            Button {
+                                baseBranch = branch
+                                isBaseBranchPickerPresented = false
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.triangle.branch")
+                                        .foregroundStyle(.secondary)
+                                    Text(branch)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    Spacer(minLength: 4)
+                                    if baseBranch == branch {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.tint)
+                                    }
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .contentShape(Rectangle())
+                                .background {
+                                    if baseBranch == branch {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.accentColor.opacity(0.12))
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(width: 320, height: 300)
+    }
+
+    private var filteredBaseBranches: [String] {
+        baseBranchOptions.filter {
+            baseBranchSearchText.isEmpty || $0.localizedCaseInsensitiveContains(baseBranchSearchText)
+        }
+    }
+
+    private var baseBranchOptions: [String] {
+        var branches = remoteBranches.compactMap { remoteBranch -> String? in
+            let branch = remoteBranch.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !branch.isEmpty else { return nil }
+            let components = branch.split(separator: "/", maxSplits: 1)
+            return components.count > 1 ? String(components[1]) : branch
+        }
+        if !baseBranch.isEmpty, !branches.contains(baseBranch) {
+            branches.append(baseBranch)
+        }
+        return Array(Set(branches)).sorted()
+    }
+
     private func loadDefaultBranch() async {
         do {
             let result = try await service.defaultBranch(in: repo.path)
-            if result.isSuccess {
+            if result.isSuccess && baseBranch.isEmpty {
                 baseBranch = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
             }
         } catch {
@@ -1187,7 +1279,6 @@ private struct GitHubPullRequestEditorSheet: View {
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 body: bodyText,
                 baseBranch: baseBranch.trimmingCharacters(in: .whitespacesAndNewlines),
-                headBranch: repo.currentBranch,
                 isDraft: isDraft,
                 in: repo.path
             )

@@ -177,14 +177,12 @@ nonisolated final class GitHubCLIService {
         title: String,
         body: String,
         baseBranch: String,
-        headBranch: String,
         isDraft: Bool,
         in repositoryPath: String
     ) async throws -> GitHubCLIResult {
         var arguments = [
             "pr", "create",
             "--base", baseBranch,
-            "--head", headBranch,
             "--title", title,
             "--body", body
         ]
